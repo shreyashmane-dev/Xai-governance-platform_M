@@ -74,7 +74,15 @@ async def upload_model(
         "checksum": checksum_bytes(raw),
         "created_at": utc_now(),
     }
-    result = await db.models.insert_one(doc)
+    from pymongo.errors import DuplicateKeyError
+    try:
+        result = await db.models.insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"A model named '{name.strip()}' with version '{version}' already exists."
+        )
+
     await write_audit(db, user["tenant_id"], user["uid"], "model_upload", "model", str(result.inserted_id), {"name": name, "version": version})
 
     return {"success": True, "data": {"id": str(result.inserted_id), "model_type": model_type, "version": version}}

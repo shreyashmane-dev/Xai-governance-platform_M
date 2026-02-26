@@ -59,7 +59,15 @@ async def upload_dataset(
         "profile": profile,
         "created_at": utc_now(),
     }
-    result = await db.datasets.insert_one(doc)
+    from pymongo.errors import DuplicateKeyError
+    try:
+        result = await db.datasets.insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A dataset named '{name.strip()}' with version '{version}' already exists."
+        )
+
     await write_audit(
         db,
         user["tenant_id"],
