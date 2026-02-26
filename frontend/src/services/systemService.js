@@ -3,6 +3,8 @@ import api from './apiClient'
 export const systemService = {
   status: () => api.get('/system/status'),
   reset: () => api.delete('/system/reset'),
+  functions: () => api.get('/system/functions'),
+  selfTest: () => api.get('/system/self-test'),
   auditLog: (limit = 200, action = '', entityType = '') => {
     const params = new URLSearchParams({ limit: String(limit) })
     const nextAction = action.trim()

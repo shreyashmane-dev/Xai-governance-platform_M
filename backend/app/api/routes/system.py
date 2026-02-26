@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import os
 
 from fastapi import APIRouter, Depends
+from fastapi.routing import APIRoute
 
 from app.core.security import verify_token
 from app.db.mongo import get_db
@@ -110,3 +111,85 @@ async def audit_log(limit: int = 100, action: str = "", entity_type: str = "", u
             "data": [],
             "warning": f"Audit log fallback: {exc}",
         }
+
+
+@router.get("/functions")
+async def list_functions(user=Depends(verify_token)):
+    from app.api.router import api_router
+
+    functions = []
+    for route in api_router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        methods = sorted(m for m in (route.methods or set()) if m not in {"HEAD", "OPTIONS"})
+        if not methods:
+            continue
+        for method in methods:
+            functions.append(
+                {
+                    "id": f"{method}:{route.path}",
+                    "method": method,
+                    "path": f"/api{route.path}",
+                    "name": route.name,
+                    "group": (route.tags or ["general"])[0],
+                }
+            )
+
+    functions.sort(key=lambda row: (row["path"], row["method"]))
+    return {
+        "success": True,
+        "data": {
+            "functions": functions,
+            "total": len(functions),
+        },
+    }
+
+
+@router.get("/self-test")
+async def self_test(user=Depends(verify_token)):
+    from app.api.router import api_router
+
+    db = get_db()
+    checks = []
+
+    try:
+        await db.command("ping")
+        checks.append({"name": "mongodb_ping", "ok": True})
+    except Exception as exc:
+        checks.append({"name": "mongodb_ping", "ok": False, "detail": str(exc)})
+
+    route_signatures = set()
+    for route in api_router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        methods = [m for m in (route.methods or set()) if m not in {"HEAD", "OPTIONS"}]
+        for method in methods:
+            route_signatures.add((method, f"/api{route.path}"))
+
+    expected = [
+        ("GET", "/api/system/status"),
+        ("GET", "/api/system/functions"),
+        ("POST", "/api/models/upload"),
+        ("POST", "/api/datasets/upload"),
+        ("POST", "/api/analytics/metrics"),
+        ("POST", "/api/chat"),
+    ]
+    for method, path in expected:
+        checks.append(
+            {
+                "name": f"route_{method}_{path}",
+                "ok": (method, path) in route_signatures,
+            }
+        )
+
+    checks.append({"name": "route_count", "ok": len(route_signatures) > 0, "value": len(route_signatures)})
+    all_ok = all(item.get("ok") for item in checks)
+    return {
+        "success": True,
+        "data": {
+            "ok": all_ok,
+            "tenant_id": user["tenant_id"],
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "checks": checks,
+        },
+    }

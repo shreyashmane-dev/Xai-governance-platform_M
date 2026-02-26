@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Loader, ErrorState, EmptyState } from '../components/feedback/States'
-import { analyticsService, datasetService, modelService } from '../services'
+import { analyticsService, datasetService, modelService, systemService } from '../services'
 import { useAppState } from '../context/AppStateContext'
 import { getApiErrorMessage } from '../utils/apiError'
 
@@ -19,20 +19,32 @@ export default function ModelsPage() {
   const [department, setDepartment] = useState('')
   const [intendedUse, setIntendedUse] = useState('')
   const [riskCategory, setRiskCategory] = useState('medium')
+  const [backendFunctions, setBackendFunctions] = useState([])
+  const [functionsError, setFunctionsError] = useState('')
 
   async function refresh() {
     setLoading(true)
     setError('')
+    setFunctionsError('')
     try {
-      const [modelsRes, datasetsRes] = await Promise.all([modelService.list(), datasetService.list()])
+      const [modelsRes, datasetsRes, functionsRes] = await Promise.all([
+        modelService.list(),
+        datasetService.list(),
+        systemService.functions().catch(() => null),
+      ])
       const models = modelsRes.data.data || []
       const rows = datasetsRes.data.data || []
+      const functions = functionsRes?.data?.data?.functions || []
       actions.patch({
         models,
         activeModel: state.activeModel || models[0] || null,
         dataset: state.dataset || rows[0] || null,
       })
       setDatasets(rows)
+      setBackendFunctions(functions)
+      if (!functionsRes) {
+        setFunctionsError('Unable to fetch backend functions.')
+      }
     } catch (event) {
       setError(getApiErrorMessage(event))
     } finally {
@@ -177,7 +189,6 @@ export default function ModelsPage() {
 
   if (loading) return <Loader text="Loading models and datasets..." />
   if (error) return <ErrorState message={error} />
-  if (!state.models.length) return <EmptyState title="No models uploaded" description="Upload a model to get started." />
 
   return (
     <div className="space-y-6">
@@ -270,6 +281,48 @@ export default function ModelsPage() {
         </div>
       </div>
 
+      <div className="card space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 className="font-semibold">Backend Functions (Live)</h4>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              All API functions fetched from backend route registry.
+            </p>
+          </div>
+          <button className="btn-secondary" onClick={refresh}>
+            Refresh Functions
+          </button>
+        </div>
+
+        {functionsError && <div className="text-sm text-rose-600">{functionsError}</div>}
+        {!backendFunctions.length ? (
+          <EmptyState title="No functions visible" description="Backend function list could not be loaded yet." />
+        ) : (
+          <div className="overflow-auto">
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="border-b text-left" style={{ borderColor: 'var(--border-muted)' }}>
+                  <th className="px-2 py-1">Method</th>
+                  <th className="px-2 py-1">Path</th>
+                  <th className="px-2 py-1">Group</th>
+                  <th className="px-2 py-1">Function</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backendFunctions.map((fn) => (
+                  <tr key={fn.id} className="border-b" style={{ borderColor: 'var(--border-muted)' }}>
+                    <td className="px-2 py-1">{fn.method}</td>
+                    <td className="px-2 py-1">{fn.path}</td>
+                    <td className="px-2 py-1">{fn.group}</td>
+                    <td className="px-2 py-1">{fn.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="card overflow-auto">
         <h4 className="mb-2 font-semibold">Model Registry</h4>
         <table className="min-w-full text-sm">
@@ -284,6 +337,13 @@ export default function ModelsPage() {
             </tr>
           </thead>
           <tbody>
+            {!filteredModels.length && (
+              <tr>
+                <td colSpan={6} className="px-3 py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                  No models uploaded yet. Use Model Upload Module above.
+                </td>
+              </tr>
+            )}
             {filteredModels.map((model) => (
               <tr
                 key={model.id}

@@ -12,6 +12,7 @@ import SettingsPage from '../pages/SettingsPage'
 import AboutPage from '../pages/AboutPage'
 import DocsPage from '../pages/DocsPage'
 import AuditLogsPage from '../pages/AuditLogsPage'
+import FunctionsPage from '../pages/FunctionsPage'
 import AppLayout from '../layouts/AppLayout'
 import useRequireAuth from '../hooks/useRequireAuth'
 
@@ -37,6 +38,7 @@ export default function AppRouter() {
       <Route path="/reports" element={<Protected><ReportsPage /></Protected>} />
       <Route path="/assistant" element={<Protected><AssistantPage /></Protected>} />
       <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
+      <Route path="/functions" element={<Protected><FunctionsPage /></Protected>} />
       <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

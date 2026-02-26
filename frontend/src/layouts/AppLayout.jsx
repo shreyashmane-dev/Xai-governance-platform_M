@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Joyride from 'react-joyride'
+import { useLocation } from 'react-router-dom'
 import Sidebar from '../components/common/Sidebar'
 import Topbar from '../components/common/Topbar'
 import ToastStack from '../components/feedback/ToastStack'
@@ -17,17 +18,22 @@ function getStatusData(payload) {
 }
 
 export default function AppLayout({ children }) {
+  const location = useLocation()
   const [runTour, setRunTour] = useState(localStorage.getItem('xai_tour_done') !== '1')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { data, run } = useApi(() => systemService.status(), [])
 
   usePolling(run, 20000, true)
   const status = useMemo(() => getStatusData(data), [data])
+  const availableTourSteps = useMemo(() => {
+    if (typeof document === 'undefined') return tourSteps
+    return tourSteps.filter((step) => step.target === 'body' || Boolean(document.querySelector(step.target)))
+  }, [location.pathname, children])
 
   return (
     <div className="page-shell">
       <Joyride
-        steps={tourSteps}
+        steps={availableTourSteps}
         run={runTour}
         continuous
         showSkipButton

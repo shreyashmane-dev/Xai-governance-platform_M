@@ -22,6 +22,7 @@ const NAV_SECTIONS = [
     label: 'Tools',
     links: [
       { label: 'AI Assistant',   path: '/assistant',       icon: '✦' },
+      { label: 'Functions',      path: '/functions',       icon: 'Fn' },
       { label: 'Settings',       path: '/settings',        icon: '⊙' },
       { label: 'About',          path: '/about',           icon: '◉' },
     ],

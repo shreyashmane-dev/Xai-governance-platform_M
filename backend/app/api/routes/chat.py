@@ -136,3 +136,13 @@ async def chat(payload: ChatRequest, user=Depends(verify_token)):
     )
 
     return {"success": True, "data": {"message": text, "latency_ms": latency_ms, "used_fallback": used_fallback}}
+
+
+@router.get("")
+async def chat_route_info():
+    return {
+        "success": True,
+        "detail": "Chat endpoint is available. Use POST with JSON payload to receive a response.",
+        "method": "POST",
+        "path": "/api/chat",
+    }

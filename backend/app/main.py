@@ -21,6 +21,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.router import api_router
+from app.api.routes import chat as chat_routes
 from app.core.config import settings
 from app.core.security import init_firebase
 from app.db.mongo import close_client, ensure_indexes
@@ -159,6 +160,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Routers
 # ─────────────────────────────────────────────
 app.include_router(api_router, prefix="/api")
+# Backward-compatible direct chat path for legacy/frontends not using /api prefix
+app.include_router(chat_routes.router, prefix="/chat", tags=["chat"])
 
 
 # ─────────────────────────────────────────────
