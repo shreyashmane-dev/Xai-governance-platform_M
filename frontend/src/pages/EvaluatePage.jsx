@@ -212,9 +212,31 @@ export default function EvaluatePage() {
                 {result.fairness?.reason || 'Fairness metrics unavailable.'}
               </p>
             ) : (
-              <div className="space-y-2 text-sm">
-                <div>Sensitive Column: {result.fairness.sensitiveColumn}</div>
-                <div>Demographic Parity Diff: {Number(result.fairness.demographicParityDiff || 0).toFixed(4)}</div>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Sensitive Column</span>
+                  <span className="font-mono">{result.fairness.sensitiveColumn}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Demographic Parity Diff</span>
+                  <span className={`font-bold ${result.fairness.demographicParityDiff > 0.1 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {Number(result.fairness.demographicParityDiff || 0).toFixed(4)}
+                  </span>
+                </div>
+                
+                {result.fairness.groupPositiveRates && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Positive Rates by Group:</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                       {Object.entries(result.fairness.groupPositiveRates).map(([group, rate]) => (
+                         <div key={group} className="flex justify-between rounded bg-slate-800/50 p-2 border border-slate-700">
+                           <span className="truncate pr-2">{group}</span>
+                           <span className="font-mono text-emerald-400">{pct(rate)}</span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
