@@ -50,16 +50,28 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 # ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    LOGGER.info("Starting up XAI Governance API (env=%s)", settings.environment)
+    env_name = os.getenv("ENVIRONMENT", settings.environment)
+    port_val = os.getenv("PORT", "unknown")
+    LOGGER.info("Starting up XAI Governance API (env=%s, port=%s)", env_name, port_val)
+    
+    # Ensure upload directory exists
+    try:
+        os.makedirs(settings.upload_dir, exist_ok=True)
+        LOGGER.info("Upload directory verified: %s", settings.upload_dir)
+    except Exception as exc:
+        LOGGER.error("Failed to create upload directory %s: %s", settings.upload_dir, exc)
+
     init_firebase()
     try:
-        await asyncio.wait_for(ensure_indexes(), timeout=10)
+        await asyncio.wait_for(ensure_indexes(), timeout=15)
+        LOGGER.info("MongoDB indexes verified")
     except asyncio.TimeoutError:
         LOGGER.warning("MongoDB index creation timed out – continuing anyway")
     except Exception as exc:  # noqa: BLE001
-        LOGGER.error("MongoDB index error: %s", exc)
-        if settings.environment != "development":
-            raise
+        LOGGER.error("Critical MongoDB index error: %s", exc)
+        if settings.is_production:
+            # We don't raise here to allow the app to start and show health errors instead of crashing the process
+            pass
     yield
     LOGGER.info("Shutting down – closing MongoDB client")
     await close_client()
@@ -86,18 +98,17 @@ app.state.limiter = limiter
 
 
 # ─────────────────────────────────────────────
-# CORS Middleware - PUBLIC ACCESS UNLOCKED
+# CORS Middleware - ULTRA COMPATIBLE
 # ─────────────────────────────────────────────
-# Configured to allow any frontend domain, any port, and any website.
-# Uses regex to echo the origin back, allowing allow_credentials=True with wildcards.
+# Configured to allow any frontend domain/port while supporting credentials.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",                       # Allows ALL origins, including any port
+    allow_origin_regex=r"https?://.*",             # Allows any http/https origin (standard regex)
     allow_credentials=True,
-    allow_methods=["*"],                           # Allows ALL methods (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],                           # Allows ALL headers
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=["X-Request-ID"],
-    max_age=600,
+    max_age=3600,
 )
 
 # ─────────────────────────────────────────────

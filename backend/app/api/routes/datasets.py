@@ -92,8 +92,15 @@ async def dataset_preview(dataset_id: str, limit: int = 10, user=Depends(verify_
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
+    storage_path = doc.get("storage_path")
+    if not storage_path or not os.path.exists(storage_path):
+        raise HTTPException(
+            status_code=400, 
+            detail="Dataset file missing on server. Note: cloud storage is ephemeral. Please re-upload the dataset."
+        )
+
     try:
-        df = pd.read_csv(doc["storage_path"])
+        df = pd.read_csv(storage_path)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
@@ -121,8 +128,15 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
+    storage_path = doc.get("storage_path")
+    if not storage_path or not os.path.exists(storage_path):
+        raise HTTPException(
+            status_code=400, 
+            detail="Dataset file missing on server. Please re-upload."
+        )
+
     try:
-        df = pd.read_csv(doc["storage_path"])
+        df = pd.read_csv(storage_path)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
