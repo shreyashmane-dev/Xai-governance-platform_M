@@ -136,6 +136,12 @@ def health() -> dict:
     return {"ok": True, "service": "ml-service", "storage": "in-memory-only"}
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+
 @app.post("/evaluate", response_model=EvaluationResponse)
 async def evaluate(
     dataset: UploadFile = File(...),

@@ -21,6 +21,8 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'node-gateway', storage: 'memory-only-for-files' })
 })
 
+app.get('/favicon.ico', (req, res) => res.status(204).end())
+
 app.use('/api', evaluateRoutes)
 
 app.use((err, req, res, next) => {

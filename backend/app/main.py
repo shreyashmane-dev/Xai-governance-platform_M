@@ -175,6 +175,12 @@ async def health():
     }
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+
 @app.get("/healthz", tags=["Health"], summary="Kubernetes-style liveness probe")
 async def healthz():
     return {"ok": True}
