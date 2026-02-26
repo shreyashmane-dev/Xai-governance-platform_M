@@ -7,8 +7,11 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+from app.core.config import settings
 from app.core.security import verify_token
 from app.db.mongo import get_db
+from app.utils.compatibility import check_feature_compatibility
+from app.utils.storage import ArtifactStorageError, resolve_artifact_path
 from app.utils.audit import write_audit
 from app.utils.time_utils import utc_now
 
@@ -27,23 +30,23 @@ def _plain(value):
     return value
 
 
-def _load_model(path: str):
-    import os
-    if not path or not os.path.exists(path):
-        raise HTTPException(status_code=400, detail="Model artifact missing on server. Cloud storage is ephemeral; please re-upload the model.")
+def _load_model(doc: dict):
     try:
+        path = resolve_artifact_path(doc, "model")
         with open(path, "rb") as src:
             return pickle.load(src)
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to load model artifact: {exc}") from exc
 
 
-def _load_dataset(path: str) -> pd.DataFrame:
-    import os
-    if not path or not os.path.exists(path):
-        raise HTTPException(status_code=400, detail="Dataset file missing on server. Cloud storage is ephemeral; please re-upload the dataset.")
+def _load_dataset(doc: dict) -> pd.DataFrame:
     try:
+        path = resolve_artifact_path(doc, "dataset")
         return pd.read_csv(path)
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
@@ -104,12 +107,22 @@ async def governance_analyze(
         if not metrics_doc:
             raise HTTPException(status_code=400, detail="Run metrics before governance analysis")
 
-        model = _load_model(model_doc["storage_path"])
-
-        df = _load_dataset(data_doc["storage_path"])
+        model = _load_model(model_doc)
+        df = _load_dataset(data_doc)
         target = model_doc.get("target_column", "target")
         if target not in df.columns:
             raise HTTPException(status_code=400, detail=f"Target column {target} missing in dataset")
+        compatibility = check_feature_compatibility(model_doc, df, target, model=model)
+        if settings.strict_feature_compatibility and not compatibility.compatible:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Model and dataset feature schema mismatch",
+                    "missing_features": compatibility.missing_features[:50],
+                    "expected_feature_count": len(compatibility.expected_features),
+                    "dataset_feature_count": len(compatibility.dataset_features),
+                },
+            )
 
         x = df.drop(columns=[target])
         x = _align_features(model, x)
@@ -212,7 +225,9 @@ async def governance_analyze(
         except Exception:
             pass
         return JSONResponse(content=_plain({"success": True, "data": report}))
-    except HTTPException:
+    except HTTPException as exc:
+        if exc.status_code in {400, 404}:
+            raise
         fallback = {
             "tenant_id": user.get("tenant_id"),
             "model_id": model_id,

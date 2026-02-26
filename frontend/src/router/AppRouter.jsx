@@ -3,6 +3,7 @@ import LandingPage from '../pages/LandingPage'
 import AuthPage from '../pages/AuthPage'
 import DashboardPage from '../pages/DashboardPage'
 import ModelsPage from '../pages/ModelsPage'
+import EvaluatePage from '../pages/EvaluatePage'
 import ExplainabilityPage from '../pages/ExplainabilityPage'
 import GovernancePage from '../pages/GovernancePage'
 import DriftPage from '../pages/DriftPage'
@@ -32,7 +33,9 @@ export default function AppRouter() {
       <Route path="/docs/:docId?" element={<DocsPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
-      <Route path="/models" element={<Protected><ModelsPage /></Protected>} />
+      <Route path="/models" element={<Protected><EvaluatePage /></Protected>} />
+      <Route path="/evaluate" element={<Protected><EvaluatePage /></Protected>} />
+      <Route path="/models-legacy" element={<Protected><ModelsPage /></Protected>} />
       <Route path="/explainability" element={<Protected><ExplainabilityPage /></Protected>} />
       <Route path="/governance" element={<Protected><GovernancePage /></Protected>} />
       <Route path="/drift" element={<Protected><DriftPage /></Protected>} />

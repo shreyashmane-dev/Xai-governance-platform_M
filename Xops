@@ -1,0 +1,223 @@
+# Xops - System Functions, Flow, Tools, Languages (Detailed)
+
+## 1) Platform Summary
+This repository is a full-stack XAI governance platform with:
+- Frontend: React + Vite SPA.
+- Backend: FastAPI REST API (legacy modules) + Node Gateway + Python ML microservice.
+- DB: MongoDB (Motor async client).
+- Auth: Firebase JWT verification.
+- ML Ops: model upload, dataset upload, metrics, SHAP, governance, drift, reports, chat.
+- Artifact storage mode: LOCAL FILESYSTEM ONLY (`UPLOAD_DIR`).
+- In-memory evaluation mode: files are processed in RAM through `backend-node` and `ml-service`.
+
+### In-Memory Evaluation Services (Current)
+- `backend-node` (Express):
+  - `POST /api/evaluate` accepts `dataset` + `model` in memory using Multer memory storage.
+  - Forwards buffers to Python service via `ML_SERVICE_URL`.
+  - Stores only computed outputs in MongoDB collection `EvaluationResult`.
+  - Immediately zeroes/drops upload buffers after request.
+- `ml-service` (FastAPI):
+  - `POST /evaluate` reads bytes in memory, computes metrics/fairness/explainability/preview.
+  - Never writes uploaded files to disk.
+
+## 2) Languages and Runtime
+- Python 3.x for backend API, ML, data processing.
+- JavaScript (ES Modules) for frontend.
+- JSX for React UI components.
+- CSS/Tailwind for styling.
+- JSON for API and configuration payloads.
+
+## 3) Core Tools and Libraries
+### Backend
+- `fastapi`, `uvicorn`, `gunicorn` - API server and runtime.
+- `pydantic`, `pydantic-settings` - config and validation.
+- `motor`, `pymongo` - async MongoDB operations.
+- `python-multipart` - multipart upload parsing.
+- `pandas`, `numpy`, `scikit-learn`, `shap` - ML/data logic.
+- `firebase-admin` - Firebase token validation.
+- `slowapi` - rate limiting.
+
+### Frontend
+- `react`, `react-dom`, `react-router-dom` - SPA UI and routing.
+- `axios` - API client.
+- `firebase` - frontend auth session.
+- `framer-motion`, `recharts`, `react-joyride` - motion, charts, guided tour.
+- `vite`, `tailwindcss`, `postcss`, `autoprefixer` - build and styling pipeline.
+
+## 4) Backend API Function Inventory and Flow
+All routes mounted under `/api` (except `/chat` backward-compat direct path).
+
+### 4.1 System (`/api/system`)
+- `GET /status`
+  - Counts models/datasets/reports and latest governance/drift indicators.
+  - Returns storage backend (`local`) and strict compatibility mode flag.
+- `DELETE /reset`
+  - Deletes tenant documents + local artifacts.
+- `GET /audit-log`
+  - Reads tenant audit stream with filters.
+- `GET /functions`
+  - Enumerates available route functions from router metadata.
+- `GET /self-test`
+  - Route and database sanity checks.
+
+### 4.2 Models (`/api/models`)
+- `POST /upload`
+  - Validates multipart/form-data, validates model file, enforces file size limit.
+  - Saves artifact to local path.
+  - Stores model metadata + feature schema + checksum in MongoDB.
+  - Writes audit event `model_upload`.
+- `GET /`
+  - Lists tenant models.
+- `GET /{model_id}/result-summary`
+  - Returns lightweight latest metrics summary: accuracy/precision/recall/f1Score.
+- `GET /{model_id}/compatibility/{dataset_id}`
+  - Preflight compatibility result (missing/extra features, strict mode).
+- `DELETE /{model_id}`
+  - Deletes model + linked analytics/governance/reports/chat + local file.
+
+### 4.3 Datasets (`/api/datasets`)
+- `POST /upload`
+  - Accepts CSV, validates size and readability.
+  - Stores local file and inserts dataset profile + preview sample.
+  - Writes audit event `dataset_upload`.
+- `GET /`
+  - Lists tenant datasets.
+- `GET /{dataset_id}/preview?limit=`
+  - Validates ObjectId and safe-parses limit.
+  - Reads file from local storage; if unavailable, uses cached preview sample.
+  - Returns structured preview metadata.
+- `GET /{dataset_id}/schema`
+  - Returns detailed schema profile (type/dtype/missing/unique).
+- `DELETE /{dataset_id}`
+  - Deletes dataset + linked dependent records + local file.
+
+### 4.4 Analytics (`/api/analytics`)
+- `POST /metrics?model_id=&dataset_id=`
+  - Loads model and dataset artifacts from local storage.
+  - Checks target column and strict feature compatibility.
+  - Runs predictions + classification metrics and persists result.
+- `POST /shap?model_id=&dataset_id=`
+  - Loads artifacts, checks compatibility, computes global importance.
+  - Persists SHAP summary.
+- `GET /shap/local?model_id=&dataset_id=&row_index=`
+  - Local explanation for single row with SHAP/fallback method.
+- `GET /summary`
+  - Returns latest aggregate summary across analytics/governance/drift.
+
+### 4.5 Governance (`/api/governance`)
+- `POST /analyze?model_id=&dataset_id=&sensitive_column=`
+  - Requires metrics availability first.
+  - Loads artifacts and checks strict compatibility.
+  - Computes fairness, quality, drift penalty, trust score, recommendations.
+  - Persists governance report and audit event.
+- `GET /trust-score?model_id=&dataset_id=`
+  - Computes weighted trust score from performance/explainability/fairness/drift/stability.
+
+### 4.6 Drift (`/api/drift`)
+- `POST /analyze?baseline_dataset_id=&current_dataset_id=`
+  - Loads baseline/current datasets from local storage.
+  - Computes numeric PSI + categorical JS divergence + alert severity.
+  - Persists drift report and audit event.
+
+### 4.7 Reports (`/api/reports`)
+- `POST /generate?model_id=&dataset_id=`
+  - Aggregates latest outputs into report payload.
+- `GET /`
+  - Lists report history.
+
+### 4.8 Chat (`/api/chat`)
+- `POST /chat`
+  - Assistant interaction using context payload.
+- `GET /chat`
+  - History/session retrieval.
+
+### 4.9 Fraud (`/api/fraud`)
+- `POST /transactions`
+- `GET /transactions`
+- `GET /stats`
+
+### 4.10 Platform Aliases (`/api` direct alias routes)
+- `/upload-model`, `/upload-dataset`, `/compute-metrics`, `/compute-shap`, `/bias-analysis`, `/drift-analysis`, `/trust-score`, `/audit-log`, `/generate-report`
+- These map to primary routes for compatibility with alternate clients.
+
+## 5) Frontend Functional Flow
+### 5.1 API Client Flow
+- Base URL resolved from `VITE_API_URL` / `VITE_API_BASE_URL`.
+- `withCredentials: true` enabled.
+- Firebase ID token is attached as `Authorization: Bearer <token>`.
+- 401 triggers redirect to `/auth`.
+
+### 5.2 Models Page Operational Flow
+- Initial load: fetch models + datasets + backend functions list.
+- Upload model:
+  - Sends multipart form.
+  - Shows progress.
+  - Fetches lightweight result summary after upload.
+- Upload dataset:
+  - Sends CSV multipart form.
+  - Refreshes dataset list/preview.
+- Dataset preview/schema:
+  - Auto loads when dataset selection changes.
+- Compatibility panel:
+  - Auto calls `/models/{model_id}/compatibility/{dataset_id}`.
+  - Shows mismatch before metrics run.
+
+### 5.3 Other Page Flows
+- Dashboard: consolidated status, summaries.
+- Explainability: SHAP global/local flows.
+- Governance: fairness + trust workflows.
+- Drift: baseline/current drift analysis.
+- Reports: generate and review audit-ready reports.
+- Settings: health checks and tenant reset.
+
+## 6) Storage and Artifact Lifecycle (Local Only)
+1. Upload endpoint receives file bytes.
+2. `persist_artifact` writes file into local `UPLOAD_DIR`.
+3. Database stores `storage_path` and metadata.
+4. Runtime read path uses `resolve_artifact_path`.
+5. Delete endpoints call `delete_artifact` to remove local files.
+
+Important operational note:
+- Local disk is instance-bound. If instance filesystem resets, artifacts must be re-uploaded.
+
+## 7) Security and Control Flow
+- Firebase token verification on protected endpoints.
+- Optional API key layer (`API_KEY`) for `/api/*`.
+- CORS policy from `BACKEND_CORS_ORIGINS`.
+- Rate limiting via SlowAPI.
+- Request ID injected and returned as `X-Request-ID`.
+- Central exception handlers provide consistent JSON error shape.
+
+## 8) Validation and Quality Gates
+- Safe ObjectId checks on resource routes.
+- Safe limit parsing for dataset preview.
+- Strict schema compatibility gate (`STRICT_FEATURE_COMPATIBILITY=true`).
+- File type/size checks on uploads.
+- Runtime compile/build validation executed:
+  - `python -m compileall backend/app`
+  - `npm run build` (frontend)
+
+## 9) Main Service Files (Execution Critical)
+- Backend app entry: `backend/app/main.py`
+- API router: `backend/app/api/router.py`
+- Key routes:
+  - `backend/app/api/routes/models.py`
+  - `backend/app/api/routes/datasets.py`
+  - `backend/app/api/routes/analytics.py`
+  - `backend/app/api/routes/governance.py`
+  - `backend/app/api/routes/drift.py`
+  - `backend/app/api/routes/system.py`
+- Local artifact utilities:
+  - `backend/app/utils/storage.py`
+  - `backend/app/utils/compatibility.py`
+- Frontend integration:
+  - `frontend/src/services/apiClient.js`
+  - `frontend/src/services/modelService.js`
+  - `frontend/src/services/datasetService.js`
+  - `frontend/src/pages/ModelsPage.jsx`
+
+## 10) Recommended Operations Practice
+- Keep `STRICT_FEATURE_COMPATIBILITY=true` in production.
+- Monitor `/health` and `/api/system/status`.
+- Track upload/report/audit endpoints for latency and error rates.
+- Use regular backup/restore strategy for MongoDB and uploaded artifacts.

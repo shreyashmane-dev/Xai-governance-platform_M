@@ -6,5 +6,7 @@ export const modelService = {
     api.post('/models/upload', formData, {
       onUploadProgress,
     }),
+  resultSummary: (modelId) => api.get(`/models/${modelId}/result-summary`),
+  compatibility: (modelId, datasetId) => api.get(`/models/${modelId}/compatibility/${datasetId}`),
   remove: (modelId) => api.delete(`/models/${modelId}`),
 }

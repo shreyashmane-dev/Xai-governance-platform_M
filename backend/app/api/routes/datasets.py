@@ -1,16 +1,25 @@
 import pandas as pd
-import os
+import logging
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.core.config import settings
 from app.core.security import verify_token
 from app.db.mongo import get_db
 from app.utils.audit import write_audit
-from app.utils.files import safe_storage_path
+from app.utils.storage import ArtifactStorageError, delete_artifact, persist_artifact, resolve_artifact_path
 from app.utils.time_utils import utc_now
 
 router = APIRouter()
+LOGGER = logging.getLogger(__name__)
+
+
+def _safe_limit(value: str | None, default: int = 10, min_value: int = 1, max_value: int = 50) -> int:
+    try:
+        parsed = int(value) if value is not None else default
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(parsed, max_value))
 
 
 @router.post("/upload")
@@ -20,65 +29,86 @@ async def upload_dataset(
     file: UploadFile = File(...),
     user=Depends(verify_token),
 ):
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
-
-    raw = await file.read()
-    if len(raw) > settings.max_upload_mb * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large")
-
-    path = safe_storage_path(settings.upload_dir, file.filename)
-    with open(path, "wb") as out:
-        out.write(raw)
-
     try:
-        df = pd.read_csv(path)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid CSV: {exc}") from exc
+        if not file.filename.lower().endswith(".csv"):
+            raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
-    if df.empty:
-        raise HTTPException(status_code=400, detail="Dataset is empty")
+        raw = await file.read()
+        if len(raw) > settings.max_upload_mb * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"File too large (max {settings.max_upload_mb}MB)")
 
-    preview = df.head(10).fillna("").to_dict(orient="records")
-    profile = {
-        "rows": int(df.shape[0]),
-        "columns": int(df.shape[1]),
-        "null_cells": int(df.isna().sum().sum()),
-    }
-    db = get_db()
-    doc = {
-        "tenant_id": user["tenant_id"],
-        "owner_uid": user["uid"],
-        "name": name.strip(),
-        "version": version,
-        "file_name": file.filename,
-        "storage_path": path,
-        "row_count": int(df.shape[0]),
-        "column_count": int(df.shape[1]),
-        "columns": list(df.columns),
-        "profile": profile,
-        "created_at": utc_now(),
-    }
-    from pymongo.errors import DuplicateKeyError
-    try:
-        result = await db.datasets.insert_one(doc)
-    except DuplicateKeyError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"A dataset named '{name.strip()}' with version '{version}' already exists."
+        storage_meta = persist_artifact(raw, file.filename, "datasets")
+        path = storage_meta["storage_path"]
+
+        try:
+            df = pd.read_csv(path)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid CSV: {exc}") from exc
+
+        if df.empty:
+            raise HTTPException(status_code=400, detail="Dataset is empty")
+
+        preview = df.head(10).fillna("").to_dict(orient="records")
+        profile = {
+            "rows": int(df.shape[0]),
+            "columns": int(df.shape[1]),
+            "null_cells": int(df.isna().sum().sum()),
+        }
+        db = get_db()
+        doc = {
+            "tenant_id": user["tenant_id"],
+            "owner_uid": user["uid"],
+            "name": name.strip(),
+            "version": version,
+            "file_name": file.filename,
+            "storage_path": storage_meta["storage_path"],
+            "storage_backend": storage_meta["storage_backend"],
+            "storage_key": storage_meta["storage_key"],
+            "row_count": int(df.shape[0]),
+            "column_count": int(df.shape[1]),
+            "columns": list(df.columns),
+            "profile": profile,
+            "preview_sample": preview,
+            "created_at": utc_now(),
+        }
+        from pymongo.errors import DuplicateKeyError
+        try:
+            result = await db.datasets.insert_one(doc)
+        except DuplicateKeyError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"A dataset named '{name.strip()}' with version '{version}' already exists."
+            )
+
+        await write_audit(
+            db,
+            user["tenant_id"],
+            user["uid"],
+            "dataset_upload",
+            "dataset",
+            str(result.inserted_id),
+            {"name": name, "version": version},
         )
 
-    await write_audit(
-        db,
-        user["tenant_id"],
-        user["uid"],
-        "dataset_upload",
-        "dataset",
-        str(result.inserted_id),
-        {"name": name, "version": version},
-    )
-
-    return {"success": True, "data": {"id": str(result.inserted_id), "preview": preview, "profile": profile}}
+        return {
+            "success": True,
+            "data": {
+                "id": str(result.inserted_id),
+                "preview": preview,
+                "profile": profile,
+                "storageBackend": storage_meta["storage_backend"],
+                "scan": {
+                    "rowCount": int(df.shape[0]),
+                    "columnCount": int(df.shape[1]),
+                    "nullCells": int(df.isna().sum().sum()),
+                },
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        LOGGER.exception("Dataset upload failed for tenant=%s", user.get("tenant_id"), exc_info=exc)
+        raise HTTPException(status_code=500, detail="Dataset upload failed") from exc
 
 
 @router.get("")
@@ -91,37 +121,58 @@ async def list_datasets(user=Depends(verify_token)):
 
 
 @router.get("/{dataset_id}/preview")
-async def dataset_preview(dataset_id: str, limit: int = 10, user=Depends(verify_token)):
+async def dataset_preview(dataset_id: str, limit: str | None = Query("10"), user=Depends(verify_token)):
     if not ObjectId.is_valid(dataset_id):
-        raise HTTPException(status_code=400, detail="Invalid dataset id")
+        raise HTTPException(status_code=400, detail="Invalid dataset ID")
 
+    parsed_limit = _safe_limit(limit)
     db = get_db()
     doc = await db.datasets.find_one({"_id": ObjectId(dataset_id), "tenant_id": user["tenant_id"]})
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    storage_path = doc.get("storage_path")
-    if not storage_path or not os.path.exists(storage_path):
-        raise HTTPException(
-            status_code=400, 
-            detail="Dataset file missing on server. Note: cloud storage is ephemeral. Please re-upload the dataset."
-        )
+    storage_path = None
+    preview = []
+    row_count = int(doc.get("row_count", 0))
+    column_count = int(doc.get("column_count", 0))
+    columns = doc.get("columns", [])
+    cache_only = False
 
     try:
-        df = pd.read_csv(storage_path)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
+        storage_path = resolve_artifact_path(doc, "dataset")
+    except ArtifactStorageError:
+        cached_preview = doc.get("preview_sample") or []
+        preview = cached_preview[:parsed_limit]
+        cache_only = True
+        LOGGER.warning(
+            "Preview fallback to cached sample for dataset_id=%s tenant=%s",
+            dataset_id,
+            user.get("tenant_id"),
+        )
+    if not cache_only:
+        try:
+            df = pd.read_csv(storage_path)
+            row_count = int(df.shape[0])
+            column_count = int(df.shape[1])
+            columns = list(df.columns)
+            preview = df.head(parsed_limit).fillna("").to_dict(orient="records")
+        except Exception as exc:
+            LOGGER.exception("Preview read failed for dataset_id=%s", dataset_id, exc_info=exc)
+            raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
-    preview = df.head(max(1, min(limit, 50))).fillna("").to_dict(orient="records")
     return {
         "success": True,
         "data": {
             "dataset_id": dataset_id,
             "name": doc.get("name"),
-            "row_count": int(df.shape[0]),
-            "column_count": int(df.shape[1]),
-            "columns": list(df.columns),
+            "totalRows": row_count,
+            "previewCount": len(preview),
+            "row_count": row_count,
+            "column_count": column_count,
+            "columns": columns,
             "preview": preview,
+            "limit": parsed_limit,
+            "from_cache": cache_only,
         },
     }
 
@@ -136,12 +187,10 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    storage_path = doc.get("storage_path")
-    if not storage_path or not os.path.exists(storage_path):
-        raise HTTPException(
-            status_code=400, 
-            detail="Dataset file missing on server. Please re-upload."
-        )
+    try:
+        storage_path = resolve_artifact_path(doc, "dataset")
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         df = pd.read_csv(storage_path)
@@ -187,7 +236,6 @@ async def delete_dataset(dataset_id: str, user=Depends(verify_token)):
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    storage_path = doc.get("storage_path")
     await db.datasets.delete_one({"_id": ObjectId(dataset_id), "tenant_id": user["tenant_id"]})
     await db.metrics.delete_many({"tenant_id": user["tenant_id"], "dataset_id": dataset_id})
     await db.shap_reports.delete_many({"tenant_id": user["tenant_id"], "dataset_id": dataset_id})
@@ -200,11 +248,7 @@ async def delete_dataset(dataset_id: str, user=Depends(verify_token)):
         }
     )
 
-    if storage_path and os.path.exists(storage_path):
-        try:
-            os.remove(storage_path)
-        except OSError:
-            pass
+    delete_artifact(doc)
 
     await write_audit(db, user["tenant_id"], user["uid"], "dataset_delete", "dataset", dataset_id, {"name": doc.get("name")})
     return {"success": True, "data": {"deleted_dataset_id": dataset_id}}

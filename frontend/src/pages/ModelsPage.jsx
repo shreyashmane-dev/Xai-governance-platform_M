@@ -21,6 +21,26 @@ export default function ModelsPage() {
   const [riskCategory, setRiskCategory] = useState('medium')
   const [backendFunctions, setBackendFunctions] = useState([])
   const [functionsError, setFunctionsError] = useState('')
+  const [compatibility, setCompatibility] = useState(null)
+
+  async function runAutoScan(modelId, datasetId) {
+    if (!modelId || !datasetId) return
+    try {
+      const res = await analyticsService.metrics(modelId, datasetId)
+      actions.patch({ metrics: res?.data?.data || null })
+      actions.addNotification({
+        type: 'success',
+        title: 'Backend scan complete',
+        message: 'Python backend scanned uploaded model+dataset and returned metrics.',
+      })
+    } catch (err) {
+      actions.addNotification({
+        type: 'error',
+        title: 'Backend scan failed',
+        message: getApiErrorMessage(err),
+      })
+    }
+  }
 
   async function refresh() {
     setLoading(true)
@@ -79,11 +99,30 @@ export default function ModelsPage() {
     loadPreview()
   }, [state.dataset?.id])
 
+  useEffect(() => {
+    async function loadCompatibility() {
+      if (!state.activeModel?.id || !state.dataset?.id) {
+        setCompatibility(null)
+        return
+      }
+      try {
+        const res = await modelService.compatibility(state.activeModel.id, state.dataset.id)
+        setCompatibility(res?.data?.data || null)
+      } catch {
+        setCompatibility(null)
+      }
+    }
+    loadCompatibility()
+  }, [state.activeModel?.id, state.dataset?.id])
+
   async function uploadModel(event) {
     const file = event.target.files?.[0]
     if (!file) return
     const form = new FormData()
-    form.append('name', file.name.replace('.pkl', ''))
+    const resolvedName = file.name.replace(/\.pkl$/i, '')
+    form.append('name', resolvedName)
+    form.append('modelName', resolvedName)
+    form.append('description', intendedUse || '')
     form.append('version', '')
     form.append('target_column', targetColumn || 'target')
     form.append('model_owner', owner)
@@ -93,13 +132,33 @@ export default function ModelsPage() {
     form.append('file', file)
     try {
       setUploadProgress(5)
-      await modelService.upload(form, (progressEvent) => {
+      const uploadRes = await modelService.upload(form, (progressEvent) => {
         if (!progressEvent.total) return
         setUploadProgress(Math.min(99, Math.round((progressEvent.loaded * 100) / progressEvent.total)))
       })
       setUploadProgress(100)
+      const newModelId = uploadRes?.data?.data?.id
       actions.addNotification({ type: 'success', title: 'Model uploaded', message: file.name })
+      if (newModelId) {
+        try {
+          const summaryRes = await modelService.resultSummary(newModelId)
+          const summary = summaryRes?.data?.data || {}
+          if (summary.accuracy != null) {
+            actions.patch({
+              metrics: {
+                accuracy: summary.accuracy,
+                precision: summary.precision,
+                recall: summary.recall,
+                f1: summary.f1Score,
+              },
+            })
+          }
+        } catch {
+          // Optional summary fetch; ignore if no metrics exist yet.
+        }
+      }
       await refresh()
+      await runAutoScan(newModelId, state.dataset?.id)
       setTimeout(() => setUploadProgress(0), 800)
     } catch (err) {
       setUploadProgress(0)
@@ -118,10 +177,12 @@ export default function ModelsPage() {
     form.append('file', file)
     try {
       const res = await datasetService.upload(form)
+      const newDatasetId = res?.data?.data?.id
       setPreview(res?.data?.data?.preview || [])
       setDatasetMeta(null)
       actions.addNotification({ type: 'success', title: 'Dataset uploaded', message: file.name })
       await refresh()
+      await runAutoScan(state.activeModel?.id, newDatasetId)
     } catch (err) {
       actions.addNotification({ type: 'error', title: 'Dataset upload failed', message: getApiErrorMessage(err) })
     } finally {
@@ -198,6 +259,7 @@ export default function ModelsPage() {
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             Upload sklearn-compatible `.pkl` models with versioned metadata.
           </p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Storage Mode: Local server storage only.</p>
 
           <div className="grid gap-2 md:grid-cols-2">
             <input className="w-full" placeholder="Model Owner" value={owner} onChange={(event) => setOwner(event.target.value)} />
@@ -252,6 +314,7 @@ export default function ModelsPage() {
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             Upload CSV, validate schema, and preview top rows.
           </p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Storage Mode: Local server storage only.</p>
 
           <label className="btn-primary inline-block cursor-pointer">
             Upload Dataset
@@ -388,6 +451,24 @@ export default function ModelsPage() {
         </button>
       </div>
 
+      {compatibility && (
+        <div className="card">
+          <h4 className="mb-2 font-semibold">Model-Dataset Compatibility</h4>
+          <div className="text-sm">
+            Status:{' '}
+            <span className={compatibility.compatible ? 'text-emerald-700' : 'text-rose-700'}>
+              {compatibility.compatible ? 'Compatible' : 'Mismatch'}
+            </span>{' '}
+            | Strict Mode: {compatibility.strict_mode ? 'ON' : 'OFF'}
+          </div>
+          {!compatibility.compatible && (
+            <div className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Missing Features: {(compatibility.missing_features || []).slice(0, 15).join(', ') || 'none'}
+            </div>
+          )}
+        </div>
+      )}
+
       {state.metrics && (
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="card">
@@ -425,6 +506,7 @@ export default function ModelsPage() {
           {datasetMeta && (
             <div className="mb-3 text-xs" style={{ color: 'var(--text-muted)' }}>
               {datasetMeta.name} | Rows: {datasetMeta.row_count} | Columns: {datasetMeta.column_count}
+              {datasetMeta.from_cache ? ' | Preview Source: cached (re-upload dataset for full file access)' : ''}
             </div>
           )}
           <table className="min-w-full text-xs">

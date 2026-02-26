@@ -13,6 +13,8 @@ Production-grade SaaS starter for model trust, explainability, governance, and d
 
 - `frontend/` React application
 - `backend/` FastAPI APIs and ML analysis services
+- `backend-node/` Express gateway (memory-only file intake, result persistence)
+- `ml-service/` FastAPI microservice for in-memory model+dataset evaluation
 - `docs/` product and engineering documentation
 - `docker-compose.yml` local container orchestration
 
@@ -30,9 +32,13 @@ Additional:
 
 - `MONGO_DB_NAME`
 - `BACKEND_CORS_ORIGINS`
+- `MAX_UPLOAD_MB` (recommended `50` on Render)
+- `STRICT_FEATURE_COMPATIBILITY` (`true` recommended)
+- Local storage is used for artifacts in `UPLOAD_DIR`.
 
 Frontend uses:
 
+- `VITE_API_URL`
 - `VITE_API_BASE_URL`
 - Firebase web SDK keys
 
@@ -73,6 +79,7 @@ docker compose up --build
 
 - Model upload and registry
 - Dataset upload and preview
+- In-memory model+dataset evaluation (`/api/evaluate`) with no file persistence
 - Metrics engine (accuracy/precision/recall/f1/auc/confusion matrix)
 - SHAP explainability engine
 - Governance and trust scoring

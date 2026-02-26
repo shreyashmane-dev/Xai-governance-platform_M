@@ -12,7 +12,11 @@
    - `FIREBASE_PRIVATE_KEY`
    - `FIREBASE_CLIENT_EMAIL`
    - `BACKEND_CORS_ORIGINS`
+   - `MAX_UPLOAD_MB=50`
+   - `STRICT_FEATURE_COMPATIBILITY=true`
+   - `UPLOAD_DIR=uploads` (local artifact storage)
 3. Frontend env vars:
+   - `VITE_API_URL` (example: `https://xai-governance-platform-vnhj.onrender.com`)
    - `VITE_API_BASE_URL`
    - Firebase web vars
 4. Health check path: `/healthz`

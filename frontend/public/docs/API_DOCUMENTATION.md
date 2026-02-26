@@ -10,12 +10,16 @@ Protected endpoints require:
 - `GET /system/status`
 
 ## Models
-- `POST /models/upload` multipart (`name`, `version`, `target_column`, `file=.pkl`)
+- `POST /models/upload` multipart (`name|modelName`, `version`, `target_column`, `file|model=.pkl`)
 - `GET /models`
+- `GET /models/{model_id}/result-summary`
+ - `GET /models/{model_id}/compatibility/{dataset_id}`
+  - Upload persists artifacts in local server storage.
 
 ## Datasets
 - `POST /datasets/upload` multipart (`name`, `version`, `file=.csv`)
 - `GET /datasets`
+- `GET /datasets/{dataset_id}/preview?limit=10`
 
 ## Analytics
 - `POST /analytics/metrics?model_id=&dataset_id=`
@@ -50,6 +54,7 @@ Protected endpoints require:
 
 ## Error Codes
 - `400` invalid payload/schema
+- `400` model/dataset feature mismatch when `STRICT_FEATURE_COMPATIBILITY=true`
 - `401` auth token invalid/expired
 - `404` resource not found
 - `429` rate limit exceeded

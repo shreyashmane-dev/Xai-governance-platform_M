@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.security import verify_token
 from app.db.mongo import get_db
+from app.utils.storage import ArtifactStorageError, resolve_artifact_path
 from app.utils.audit import write_audit
 from app.utils.time_utils import utc_now
 
@@ -19,15 +20,12 @@ def _oid(value: str, field_name: str) -> ObjectId:
     return ObjectId(value)
 
 
-def _read_dataset(path: str, label: str) -> pd.DataFrame:
-    import os
-    if not path or not os.path.exists(path):
-        raise HTTPException(
-            status_code=400, 
-            detail=f"{label} dataset file missing on server. Cloud storage is ephemeral; please re-upload the dataset."
-        )
+def _read_dataset(doc: dict, label: str) -> pd.DataFrame:
     try:
+        path = resolve_artifact_path(doc, "dataset")
         return pd.read_csv(path)
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=f"{label} {exc}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read {label} dataset: {exc}") from exc
 
@@ -102,8 +100,8 @@ async def analyze_drift(baseline_dataset_id: str = Query(...), current_dataset_i
         if not baseline or not current:
             raise HTTPException(status_code=404, detail="Baseline or current dataset not found")
 
-        bdf = _read_dataset(baseline["storage_path"], "Baseline")
-        cdf = _read_dataset(current["storage_path"], "Current")
+        bdf = _read_dataset(baseline, "Baseline")
+        cdf = _read_dataset(current, "Current")
         shared_cols = [c for c in bdf.columns if c in cdf.columns]
         numeric_cols = [
             c

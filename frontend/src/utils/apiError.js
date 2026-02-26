@@ -1,6 +1,6 @@
 export function getApiErrorMessage(error) {
   const status = error?.response?.status
-  const detail = error?.response?.data?.detail
+  const detail = error?.response?.data?.detail || error?.response?.data?.error
 
   if (status) {
     const text = typeof detail === 'string' ? detail : detail ? JSON.stringify(detail) : error?.response?.statusText || 'Request failed'
@@ -8,7 +8,7 @@ export function getApiErrorMessage(error) {
   }
 
   if (error?.request) {
-    return 'Network error: backend unreachable or CORS blocked. Ensure API is running at http://127.0.0.1:8000.'
+    return 'Network error: backend unreachable or CORS blocked. Verify backend URL and CORS settings.'
   }
 
   return error?.message || 'Unexpected error'

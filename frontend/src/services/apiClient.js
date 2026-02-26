@@ -15,7 +15,8 @@ function normalizeApiBaseUrl() {
 
 const api = axios.create({
   baseURL: normalizeApiBaseUrl(),
-  timeout: 20000,
+  withCredentials: true,
+  timeout: 60000,
 })
 
 api.interceptors.request.use(async (config) => {

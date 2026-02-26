@@ -7,8 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from app.core.security import verify_token
+from app.core.config import settings
 from app.db.mongo import get_db
 from app.services.ml_service import compute_classification_metrics, compute_shap_summary
+from app.utils.compatibility import check_feature_compatibility
+from app.utils.storage import ArtifactStorageError, resolve_artifact_path
 from app.utils.audit import write_audit
 from app.utils.time_utils import utc_now
 
@@ -21,23 +24,23 @@ def _oid(value: str) -> ObjectId:
     return ObjectId(value)
 
 
-def _load_model(path: str):
-    import os
-    if not path or not os.path.exists(path):
-        raise HTTPException(status_code=400, detail="Model artifact missing. Cloud storage is ephemeral; please re-upload.")
+def _load_model(doc: dict):
     try:
+        path = resolve_artifact_path(doc, "model")
         with open(path, "rb") as src:
             return pickle.load(src)
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to load model artifact: {exc}") from exc
 
 
-def _load_dataset(path: str) -> pd.DataFrame:
-    import os
-    if not path or not os.path.exists(path):
-        raise HTTPException(status_code=400, detail="Dataset file missing. Cloud storage is ephemeral; please re-upload.")
+def _load_dataset(doc: dict) -> pd.DataFrame:
     try:
+        path = resolve_artifact_path(doc, "dataset")
         return pd.read_csv(path)
+    except ArtifactStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
@@ -61,11 +64,22 @@ async def compute_metrics(model_id: str = Query(...), dataset_id: str = Query(..
     if not model_doc or not data_doc:
         raise HTTPException(status_code=404, detail="Model or dataset not found")
 
-    model = _load_model(model_doc["storage_path"])
-    df = _load_dataset(data_doc["storage_path"])
+    model = _load_model(model_doc)
+    df = _load_dataset(data_doc)
     target = model_doc.get("target_column", "target")
     if target not in df.columns:
         raise HTTPException(status_code=400, detail=f"Target column {target} missing in dataset")
+    compatibility = check_feature_compatibility(model_doc, df, target, model=model)
+    if settings.strict_feature_compatibility and not compatibility.compatible:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Model and dataset feature schema mismatch",
+                "missing_features": compatibility.missing_features[:50],
+                "expected_feature_count": len(compatibility.expected_features),
+                "dataset_feature_count": len(compatibility.dataset_features),
+            },
+        )
 
     y_true = df[target]
     x = df.drop(columns=[target])
@@ -98,9 +112,18 @@ async def compute_shap(model_id: str = Query(...), dataset_id: str = Query(...),
         if not model_doc or not data_doc:
             raise HTTPException(status_code=404, detail="Model or dataset not found")
 
-        model = _load_model(model_doc["storage_path"])
-        df = _load_dataset(data_doc["storage_path"])
+        model = _load_model(model_doc)
+        df = _load_dataset(data_doc)
         target = model_doc.get("target_column", "target")
+        compatibility = check_feature_compatibility(model_doc, df, target, model=model)
+        if settings.strict_feature_compatibility and not compatibility.compatible:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Model and dataset feature schema mismatch",
+                    "missing_features": compatibility.missing_features[:50],
+                },
+            )
         x = df.drop(columns=[target]) if target in df.columns else df
         x = _align_features(model, x)
         if x.empty:
@@ -123,7 +146,9 @@ async def compute_shap(model_id: str = Query(...), dataset_id: str = Query(...),
         await db.shap_reports.insert_one(doc)
         await write_audit(db, user["tenant_id"], user["uid"], "compute_shap", "model", model_id, {"dataset_id": dataset_id})
         return {"success": True, "data": summary}
-    except HTTPException:
+    except HTTPException as exc:
+        if exc.status_code in {400, 404}:
+            raise
         return JSONResponse(
             content={
                 "success": True,
@@ -162,9 +187,18 @@ async def compute_shap_local(
     if not model_doc or not data_doc:
         raise HTTPException(status_code=404, detail="Model or dataset not found")
 
-    model = _load_model(model_doc["storage_path"])
-    df = _load_dataset(data_doc["storage_path"])
+    model = _load_model(model_doc)
+    df = _load_dataset(data_doc)
     target = model_doc.get("target_column", "target")
+    compatibility = check_feature_compatibility(model_doc, df, target, model=model)
+    if settings.strict_feature_compatibility and not compatibility.compatible:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Model and dataset feature schema mismatch",
+                "missing_features": compatibility.missing_features[:50],
+            },
+        )
     x = df.drop(columns=[target]) if target in df.columns else df
     x = _align_features(model, x)
     if x.empty:

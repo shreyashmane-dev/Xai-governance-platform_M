@@ -4,6 +4,7 @@ import os
 from fastapi import APIRouter, Depends
 from fastapi.routing import APIRoute
 
+from app.core.config import settings
 from app.core.security import verify_token
 from app.db.mongo import get_db
 from app.utils.audit import write_audit
@@ -37,6 +38,8 @@ async def system_status(user=Depends(verify_token)):
                 "reports": report_count,
                 "trust_score": (latest_governance or {}).get("trust_score"),
                 "drift_alert_count": (latest_drift or {}).get("alert_count", 0),
+                "storage_backend": settings.storage_backend,
+                "strict_feature_compatibility": settings.strict_feature_compatibility,
             },
         }
     except Exception as exc:
