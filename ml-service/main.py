@@ -8,7 +8,38 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+
+class Metrics(BaseModel):
+    accuracy: float
+    precision: float
+    recall: float
+    f1: float
+
+class Fairness(BaseModel):
+    available: bool
+    reason: str | None = None
+    sensitiveColumn: str | None = None
+    groupPositiveRates: dict[str, float] | None = None
+    demographicParityDiff: float | None = None
+
+class FeatureImportance(BaseModel):
+    feature: str
+    value: float
+
+class Explainability(BaseModel):
+    featureImportance: list[FeatureImportance]
+    shapSummary: list[FeatureImportance]
+
+class EvaluationResponse(BaseModel):
+    metrics: Metrics
+    confusionMatrix: list[list[int]]
+    fairness: Fairness
+    explainability: Explainability
+    preview: list[dict[str, Any]]
+    rowCount: int
+    columnCount: int
 
 app = FastAPI(title="XAI ML Evaluator", version="1.0.0")
 
@@ -105,7 +136,7 @@ def health() -> dict:
     return {"ok": True, "service": "ml-service", "storage": "in-memory-only"}
 
 
-@app.post("/evaluate")
+@app.post("/evaluate", response_model=EvaluationResponse)
 async def evaluate(
     dataset: UploadFile = File(...),
     model: UploadFile = File(...),

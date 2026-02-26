@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 @router.post("/upload")
 async def upload_model(
-    request: Request | None = None,
+    request: Request,
     name: str = Form(""),
     model_name: str = Form("", alias="modelName"),
     description: str = Form(""),
@@ -36,8 +36,8 @@ async def upload_model(
     model: UploadFile | None = File(None),
     user=Depends(verify_token),
 ):
-    content_type = (request.headers.get("content-type", "") if request else "").lower()
-    if request is not None and "multipart/form-data" not in content_type:
+    content_type = request.headers.get("content-type", "").lower()
+    if "multipart/form-data" not in content_type:
         raise HTTPException(status_code=400, detail="Content-Type must be multipart/form-data")
 
     upload_file = file or model
