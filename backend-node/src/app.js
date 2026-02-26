@@ -10,7 +10,19 @@ const app = express()
 app.use(helmet())
 app.use(
   cors({
-    origin: process.env.FRONTEND_ORIGIN || true,
+    origin: (origin, callback) => {
+      const allowed = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:3000',
+        process.env.FRONTEND_ORIGIN,
+      ]
+      if (!origin || allowed.includes(origin) || process.env.BACKEND_CORS_ORIGINS === '*') {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
     credentials: true,
   })
 )

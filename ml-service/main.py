@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
@@ -43,6 +44,14 @@ class EvaluationResponse(BaseModel):
 
 app = FastAPI(title="XAI ML Evaluator", version="1.0.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
 
 
@@ -73,9 +82,8 @@ def _feature_importance(model: Any, columns: list[str]) -> list[dict[str, float]
         values = np.abs(coef)
     if values is None or values.size == 0:
         return []
-    limit = min(len(columns), len(values))
     ranked = sorted(
-        [{"feature": columns[i], "value": float(values[i])} for i in range(limit)],
+        [{"feature": columns[i], "value": float(values[i])} for i in range(len(columns)) if i < len(values)],
         key=lambda row: row["value"],
         reverse=True,
     )

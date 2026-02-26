@@ -79,8 +79,22 @@ app = FastAPI(
 app.state.limiter = limiter
 
 
-cors_origins = settings.cors_origins
-if cors_origins == ["*"]:
+cors_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "https://xai-governance-platform.vercel.app",
+    "https://xai-trustops.vercel.app",
+]
+
+# Add any custom origins from settings
+if settings.backend_cors_origins and settings.backend_cors_origins != "*":
+    for origin in settings.backend_cors_origins.split(","):
+        clean = origin.strip()
+        if clean and clean not in cors_origins:
+            cors_origins.append(clean)
+
+if settings.backend_cors_origins == "*":
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=r"https?://.*",
