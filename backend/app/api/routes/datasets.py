@@ -49,6 +49,18 @@ async def upload_dataset(
             raise HTTPException(status_code=400, detail="Dataset is empty")
 
         preview = df.head(10).fillna("").to_dict(orient="records")
+        schema_cols = []
+        for col in df.columns:
+            s = df[col]
+            schema_cols.append({
+                "name": col,
+                "type": "numeric" if pd.api.types.is_numeric_dtype(s) else "categorical",
+                "dtype": str(s.dtype),
+                "missing_count": int(s.isna().sum()),
+                "missing_ratio": round(float(s.isna().sum() / max(len(df), 1)), 4),
+                "unique_count": int(s.nunique(dropna=True)),
+            })
+
         profile = {
             "rows": int(df.shape[0]),
             "columns": int(df.shape[1]),
@@ -67,6 +79,7 @@ async def upload_dataset(
             "row_count": int(df.shape[0]),
             "column_count": int(df.shape[1]),
             "columns": list(df.columns),
+            "schema": schema_cols,
             "profile": profile,
             "preview_sample": preview,
             "created_at": utc_now(),
@@ -95,6 +108,7 @@ async def upload_dataset(
             "data": {
                 "id": str(result.inserted_id),
                 "preview": preview,
+                "schema": schema_cols,
                 "profile": profile,
                 "storageBackend": storage_meta["storage_backend"],
                 "scan": {
@@ -187,6 +201,21 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
     if not doc:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
+    # Return cached schema if available
+    if doc.get("schema"):
+        return {
+            "success": True,
+            "data": {
+                "dataset_id": dataset_id,
+                "name": doc.get("name"),
+                "row_count": doc.get("row_count"),
+                "column_count": doc.get("column_count"),
+                "columns": doc.get("schema"),
+                "from_cache": True,
+            },
+        }
+
+    # Fallback to reading file if schema not in DB (for older uploads)
     try:
         storage_path = resolve_artifact_path(doc, "dataset")
     except ArtifactStorageError as exc:
@@ -214,6 +243,9 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
             }
         )
 
+    # Optionally update doc with schema for next time
+    await db.datasets.update_one({"_id": ObjectId(dataset_id)}, {"$set": {"schema": columns}})
+
     return {
         "success": True,
         "data": {
@@ -222,6 +254,7 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
             "row_count": int(df.shape[0]),
             "column_count": int(df.shape[1]),
             "columns": columns,
+            "from_cache": False,
         },
     }
 
