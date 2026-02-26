@@ -1,5 +1,6 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -7,6 +8,7 @@ class Settings(BaseSettings):
 
     app_name: str = "XAI Governance API"
     environment: str = "development"
+    port: int = Field(8000, alias="PORT")
 
     mongodb_uri: str = Field(..., alias="MONGODB_URI")
     mongo_db_name: str = Field("xai_platform", alias="MONGO_DB_NAME")
@@ -27,6 +29,7 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 30
     chat_rate_limit: int = 30
     chat_rate_window_seconds: int = 300
+    api_key: Optional[str] = Field(None, alias="API_KEY")
 
 
 settings = Settings()
