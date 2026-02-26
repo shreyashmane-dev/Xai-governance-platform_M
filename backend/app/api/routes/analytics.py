@@ -22,20 +22,22 @@ def _oid(value: str) -> ObjectId:
 
 
 def _load_model(path: str):
+    import os
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=400, detail="Model artifact missing. Cloud storage is ephemeral; please re-upload.")
     try:
         with open(path, "rb") as src:
             return pickle.load(src)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail=f"Model artifact not found on disk: {path}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to load model artifact: {exc}") from exc
 
 
 def _load_dataset(path: str) -> pd.DataFrame:
+    import os
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=400, detail="Dataset file missing. Cloud storage is ephemeral; please re-upload.")
     try:
         return pd.read_csv(path)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail=f"Dataset file not found on disk: {path}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 

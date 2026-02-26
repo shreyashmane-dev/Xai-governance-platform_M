@@ -20,10 +20,14 @@ def _oid(value: str, field_name: str) -> ObjectId:
 
 
 def _read_dataset(path: str, label: str) -> pd.DataFrame:
+    import os
+    if not path or not os.path.exists(path):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"{label} dataset file missing on server. Cloud storage is ephemeral; please re-upload the dataset."
+        )
     try:
         return pd.read_csv(path)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail=f"{label} dataset file not found on disk") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read {label} dataset: {exc}") from exc
 

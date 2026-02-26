@@ -28,20 +28,22 @@ def _plain(value):
 
 
 def _load_model(path: str):
+    import os
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=400, detail="Model artifact missing on server. Cloud storage is ephemeral; please re-upload the model.")
     try:
         with open(path, "rb") as src:
             return pickle.load(src)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail="Model artifact file not found") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to load model artifact: {exc}") from exc
 
 
 def _load_dataset(path: str) -> pd.DataFrame:
+    import os
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=400, detail="Dataset file missing on server. Cloud storage is ephemeral; please re-upload the dataset.")
     try:
         return pd.read_csv(path)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail="Dataset file not found") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
 
