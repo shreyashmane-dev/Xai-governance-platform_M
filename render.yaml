@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: xai-governance-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: MONGO_DB_NAME
+        value: xai_platform
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
