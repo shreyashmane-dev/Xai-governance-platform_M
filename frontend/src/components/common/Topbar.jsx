@@ -1,79 +1,217 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Menu } from './icons'
 import { useAuth } from '../../context/AuthContext'
 import { useAppState } from '../../context/AppStateContext'
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="3" y1="6"  x2="21" y2="6"  />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  )
+}
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+}
+function BellIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+function SunIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  )
+}
+function MoonIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  )
+}
 
 export default function Topbar({ status, onMenuClick }) {
   const { user, logout } = useAuth()
   const { state, actions } = useAppState()
   const navigate = useNavigate()
-  const [theme, setTheme] = useState(localStorage.getItem('xai_theme') || 'light')
+  const [theme, setTheme] = useState(localStorage.getItem('xai_theme') || 'dark')
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('xai_theme', theme)
   }, [theme])
 
-  function onSearchKeyDown(event) {
-    if (event.key !== 'Enter') return
-    navigate('/models')
+  function onSearchKeyDown(e) {
+    if (e.key === 'Enter') navigate('/models')
   }
 
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'GU'
+
   return (
-    <header
-      className="sticky top-0 z-40 flex items-center justify-between border-b px-4 py-3 backdrop-blur lg:px-6"
-      style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-surface)' }}
-    >
-      <div className="flex items-center gap-3">
+    <header className="topbar">
+      {/* Left — menu button (mobile) + brand chip */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
         <button
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border lg:hidden"
-          style={{ borderColor: 'var(--border-muted)', color: 'var(--text-primary)' }}
+          className="btn-ghost"
+          style={{ padding: '0.4rem', display: 'none' }}
+          id="mobile-menu-btn"
           onClick={onMenuClick}
           aria-label="Open navigation"
+          ref={(el) => {
+            if (!el) return
+            const mq = window.matchMedia('(max-width: 1023px)')
+            el.style.display = mq.matches ? 'flex' : 'none'
+            const fn = (e) => { el.style.display = e.matches ? 'flex' : 'none' }
+            mq.addEventListener('change', fn)
+          }}
         >
-          <Menu />
+          <MenuIcon />
         </button>
-        <div className="hidden text-sm font-semibold text-primary-600 sm:block">AI Governance Workspace</div>
+
+        {/* Workspace badge */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.45rem',
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: '0.85rem', fontWeight: 700,
+          color: 'var(--text-primary)',
+        }}>
+          <span style={{ color: 'var(--violet-light)' }}>✦</span>
+          <span className="hidden sm:block">AI Governance Workspace</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
-        <input
-          className="hidden w-60 rounded-lg border px-3 py-2 text-sm md:block"
-          style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)', color: 'var(--text-primary)' }}
-          placeholder="Search models, departments, reports"
-          value={state.searchQuery || ''}
-          onChange={(event) => actions.patch({ searchQuery: event.target.value })}
-          onKeyDown={onSearchKeyDown}
-        />
+      {/* Center — search */}
+      <div className="topbar-search" style={{ flex: 1, maxWidth: 320, display: 'none' }}
+        ref={(el) => {
+          if (!el) return
+          const mq = window.matchMedia('(min-width: 640px)')
+          el.style.display = mq.matches ? 'block' : 'none'
+          mq.addEventListener('change', (e) => { el.style.display = e.matches ? 'block' : 'none' })
+        }}
+      >
+        <SearchIcon style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative' }}>
+          <span style={{
+            position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--text-muted)', pointerEvents: 'none', display: 'flex',
+          }}>
+            <SearchIcon />
+          </span>
+          <input
+            style={{ paddingLeft: '2.1rem', height: '36px', fontSize: '0.82rem' }}
+            placeholder="Search models, reports…"
+            value={state.searchQuery || ''}
+            onChange={(e) => actions.patch({ searchQuery: e.target.value })}
+            onKeyDown={onSearchKeyDown}
+          />
+        </div>
+      </div>
 
-        <button className="btn-secondary px-3 py-2" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-          {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
-
-        <div className="hidden items-center gap-2 text-xs md:flex" style={{ color: 'var(--text-muted)' }}>
-          <span className={`h-2 w-2 rounded-full ${status?.ok ? 'bg-success-500' : 'bg-rose-500'}`} />
-          {status?.ok ? 'System Healthy' : 'System Degraded'}
+      {/* Right controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        {/* System status */}
+        <div className="topbar-chip" style={{ display: 'none' }}
+          ref={(el) => {
+            if (!el) return
+            const mq = window.matchMedia('(min-width: 768px)')
+            el.style.display = mq.matches ? 'flex' : 'none'
+            mq.addEventListener('change', (e) => { el.style.display = e.matches ? 'flex' : 'none' })
+          }}
+        >
+          <span className={`dot ${status?.ok ? 'dot-green' : 'dot-red'}`} />
+          {status?.ok ? 'Healthy' : 'Degraded'}
         </div>
 
-        <button className="relative rounded-lg p-2 transition hover:bg-slate-100" style={{ color: 'var(--text-primary)' }}>
-          <Bell />
-          {state.notifications.length > 0 && (
-            <span className="absolute -right-1 -top-1 rounded-full bg-primary-600 px-1 text-[10px] text-white">
+        {/* Theme toggle */}
+        <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </button>
+
+        {/* Notifications */}
+        <button
+          className="theme-toggle"
+          style={{ position: 'relative' }}
+          aria-label="Notifications"
+        >
+          <BellIcon />
+          {state.notifications?.length > 0 && (
+            <span style={{
+              position: 'absolute', top: '-3px', right: '-3px',
+              background: 'var(--violet)',
+              color: '#fff', fontSize: '0.6rem', fontWeight: 700,
+              borderRadius: '999px', padding: '1px 4px',
+              boxShadow: 'var(--glow-violet)',
+            }}>
               {state.notifications.length}
             </span>
           )}
         </button>
 
-        <div
-          className="hidden rounded-full border px-3 py-1 text-sm lg:block"
-          style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)', color: 'var(--text-primary)' }}
-        >
-          {user?.email || 'Guest'}
+        {/* User avatar + menu */}
+        <div style={{ position: 'relative' }}>
+          <button
+            className="topbar-avatar"
+            onClick={() => setShowUserMenu((v) => !v)}
+            aria-label="User menu"
+          >
+            {initials}
+          </button>
+
+          {showUserMenu && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              minWidth: '200px', background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-elevated)',
+              zIndex: 100, overflow: 'hidden',
+            }}>
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderBottom: '1px solid var(--border)',
+                fontSize: '0.8rem',
+              }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.82rem' }}>
+                  {user?.displayName || 'User'}
+                </div>
+                <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem', fontSize: '0.75rem' }}>
+                  {user?.email || 'guest@example.com'}
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowUserMenu(false); logout() }}
+                style={{
+                  width: '100%', padding: '0.65rem 1rem', background: 'none',
+                  border: 'none', textAlign: 'left', cursor: 'pointer',
+                  color: 'var(--rose)', fontSize: '0.82rem', fontWeight: 600,
+                  transition: 'background 0.12s ease',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--rose-dim)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
-        <button onClick={logout} className="btn-secondary px-3 py-2">
-          Logout
-        </button>
       </div>
     </header>
   )

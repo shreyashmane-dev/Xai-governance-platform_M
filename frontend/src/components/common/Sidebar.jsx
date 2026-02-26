@@ -1,67 +1,132 @@
 import { NavLink } from 'react-router-dom'
 
-const links = [
-  ['Dashboard', '/dashboard'],
-  ['Models', '/models'],
-  ['Explainability', '/explainability'],
-  ['Governance', '/governance'],
-  ['Drift Monitor', '/drift'],
-  ['Reports', '/reports'],
-  ['Audit Logs', '/audit-logs'],
-  ['AI Assistant', '/assistant'],
-  ['Settings', '/settings'],
-  ['About Us', '/about'],
+const NAV_SECTIONS = [
+  {
+    label: 'Core',
+    links: [
+      { label: 'Dashboard',      path: '/dashboard',      icon: '⬡' },
+      { label: 'Models',         path: '/models',          icon: '◈' },
+      { label: 'Explainability', path: '/explainability',  icon: '◎' },
+    ],
+  },
+  {
+    label: 'Governance',
+    links: [
+      { label: 'Governance',     path: '/governance',      icon: '⬡' },
+      { label: 'Drift Monitor',  path: '/drift',           icon: '≋' },
+      { label: 'Audit Logs',     path: '/audit-logs',      icon: '⊟' },
+      { label: 'Reports',        path: '/reports',         icon: '⊞' },
+    ],
+  },
+  {
+    label: 'Tools',
+    links: [
+      { label: 'AI Assistant',   path: '/assistant',       icon: '✦' },
+      { label: 'Settings',       path: '/settings',        icon: '⊙' },
+      { label: 'About',          path: '/about',           icon: '◉' },
+    ],
+  },
 ]
 
 function SidebarContent({ onRestartTour, status, onNavigate }) {
   return (
-    <>
-      <div className="mb-6 text-xl font-bold text-primary-600">XAI TrustOps</div>
-      <nav className="space-y-1">
-        {links.map(([label, path]) => (
-          <NavLink
-            key={path}
-            to={path}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `block rounded-xl px-3 py-2 text-sm ${isActive ? 'bg-primary-600 text-white shadow-sm' : ''}`
-            }
-            style={({ isActive }) => (!isActive ? { color: 'var(--text-muted)' } : undefined)}
-          >
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-      <button id="btn-restart-tour" className="btn-secondary mt-4 w-full" onClick={onRestartTour}>
-        Restart Tour
-      </button>
-      <div
-        className="mt-8 rounded-xl border p-3 text-xs"
-        style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)', color: 'var(--text-muted)' }}
-      >
-        <div>v1.0.0</div>
-        <div>Uptime: {status?.uptimeSeconds != null ? `${Math.floor(status.uptimeSeconds / 60)}m` : 'n/a'}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0 }}>
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon">✦</div>
+        <div>
+          <div>XAI TrustOps</div>
+          <div style={{ fontSize: '0.62rem', fontWeight: 400, color: 'var(--text-muted)', marginTop: '-2px', fontFamily: 'Inter, sans-serif' }}>
+            AI Governance
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label}>
+            <div className="sidebar-section-label">{section.label}</div>
+            {section.links.map(({ label, path, icon }) => (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={onNavigate}
+                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              >
+                <span style={{ fontSize: '0.85rem', width: '18px', textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+
+        {/* Restart tour */}
+        <div style={{ marginTop: '0.75rem', padding: '0 0 0.25rem' }}>
+          <button id="btn-restart-tour" className="sidebar-link" style={{ width: '100%' }} onClick={onRestartTour}>
+            <span style={{ fontSize: '0.85rem', width: '18px', textAlign: 'center', flexShrink: 0 }}>↺</span>
+            Restart Tour
+          </button>
+        </div>
+      </nav>
+
+      {/* Status pill */}
+      <div className="sidebar-status-pill">
+        <span>v1.0.0</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <span
+            style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: status?.ok ? 'var(--emerald)' : 'var(--rose)',
+              boxShadow: status?.ok ? '0 0 6px var(--emerald)' : '0 0 6px var(--rose)',
+              flexShrink: 0,
+            }}
+          />
+          <span>{status?.uptimeSeconds != null ? `${Math.floor(status.uptimeSeconds / 60)}m` : 'n/a'}</span>
+        </div>
+      </div>
+    </div>
   )
 }
 
 export default function Sidebar({ onRestartTour, status, mobileOpen = false, onClose }) {
   return (
     <>
-      <aside data-tour="sidebar" className="hidden w-72 border-r p-5 lg:block" style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-surface)' }}>
+      {/* Desktop */}
+      <aside data-tour="sidebar" className="sidebar-root" style={{ display: 'none' }}
+        ref={(el) => { if (el) el.style.display = 'flex' }}>
         <SidebarContent onRestartTour={onRestartTour} status={status} />
       </aside>
 
-      <div className={`fixed inset-0 z-50 lg:hidden ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      {/* Mobile overlay */}
+      <div
+        style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          pointerEvents: mobileOpen ? 'auto' : 'none',
+        }}
+        className="lg:hidden"
+      >
         <button
           aria-label="Close navigation"
-          className={`absolute inset-0 bg-slate-950/45 transition-opacity ${mobileOpen ? 'opacity-100' : 'opacity-0'}`}
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'var(--bg-overlay)',
+            opacity: mobileOpen ? 1 : 0,
+            transition: 'opacity 0.2s ease',
+            border: 'none',
+            cursor: 'pointer',
+          }}
           onClick={onClose}
         />
         <aside
-          className={`relative h-full w-72 border-r p-5 transition-transform duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-surface)' }}
+          style={{
+            position: 'relative',
+            height: '100%',
+            width: '240px',
+            transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
+            transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          }}
+          className="sidebar-root"
         >
           <SidebarContent onRestartTour={onRestartTour} status={status} onNavigate={onClose} />
         </aside>
