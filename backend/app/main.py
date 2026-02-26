@@ -86,33 +86,18 @@ app.state.limiter = limiter
 
 
 # ─────────────────────────────────────────────
-# CORS Middleware
-#
-# Security note: allow_origins=["*"] + allow_credentials=True is forbidden
-# by the Fetch spec (browsers reject it). We work around this by echoing
-# the requesting Origin back when credentials are involved; for non-credentialed
-# requests the wildcard is perfectly fine.
-#
-# The allow_origin_regex below covers:
-#   • http(s)://anything (any domain, any port)
+# CORS Middleware - PUBLIC ACCESS UNLOCKED
 # ─────────────────────────────────────────────
+# Configured to allow any frontend domain, any port, and any website.
+# Uses regex to echo the origin back, allowing allow_credentials=True with wildcards.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,          # list from env or ["*"]
-    allow_origin_regex=r"https?://.*",            # catch-all: every http/https origin
+    allow_origin_regex=".*",                       # Allows ALL origins, including any port
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "X-API-Key",
-        "x-api-key",
-    ],
+    allow_methods=["*"],                           # Allows ALL methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],                           # Allows ALL headers
     expose_headers=["X-Request-ID"],
-    max_age=600,                                  # cache preflight for 10 min
+    max_age=600,
 )
 
 # ─────────────────────────────────────────────
@@ -139,13 +124,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        # ── Security Headers ───────────────────────────────────────────────
+        # ── Production-ready Security Headers ──────────────────────────────
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
         # HSTS – only in production over HTTPS
         if settings.environment == "production":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -234,19 +219,20 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 # ─────────────────────────────────────────────
-# Local dev entry-point
+# Production-ready Entry Point
 # ─────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
 
+    # Cloud providers like Render/Heroku inject the PORT environment variable
     port = int(os.environ.get("PORT", settings.port))
+    
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
+        host="0.0.0.0",               # Bind to all interfaces for cloud deployment
         port=port,
         reload=settings.environment == "development",
         log_level="info",
-        access_log=True,
-        proxy_headers=True,          # Trust X-Forwarded-For from Render's proxy
+        proxy_headers=True,           # Trust headers from Render's load balancer
         forwarded_allow_ips="*",
     )

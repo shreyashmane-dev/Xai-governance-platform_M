@@ -2,10 +2,14 @@ import axios from 'axios'
 import { auth } from './firebase'
 
 function normalizeApiBaseUrl() {
-  const viteEnv =
-    (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_API_URL || import.meta.env.NEXT_PUBLIC_API_URL)) || ''
-  const nextEnv = (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL) || ''
-  const raw = (viteEnv || nextEnv || 'http://localhost:8000').trim().replace(/\/+$/, '')
+  const env = import.meta.env || {}
+  const raw = (
+    env.VITE_API_URL || 
+    env.VITE_API_BASE_URL || 
+    env.NEXT_PUBLIC_API_URL || 
+    'http://localhost:8000'
+  ).trim().replace(/\/+$/, '')
+  
   return raw.endsWith('/api') ? raw : `${raw}/api`
 }
 

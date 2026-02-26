@@ -11,6 +11,7 @@ import AssistantPage from '../pages/AssistantPage'
 import SettingsPage from '../pages/SettingsPage'
 import AboutPage from '../pages/AboutPage'
 import DocsPage from '../pages/DocsPage'
+import FraudPage from '../pages/FraudPage'
 import AuditLogsPage from '../pages/AuditLogsPage'
 import FunctionsPage from '../pages/FunctionsPage'
 import AppLayout from '../layouts/AppLayout'
@@ -35,6 +36,7 @@ export default function AppRouter() {
       <Route path="/explainability" element={<Protected><ExplainabilityPage /></Protected>} />
       <Route path="/governance" element={<Protected><GovernancePage /></Protected>} />
       <Route path="/drift" element={<Protected><DriftPage /></Protected>} />
+      <Route path="/fraud" element={<Protected><FraudPage /></Protected>} />
       <Route path="/reports" element={<Protected><ReportsPage /></Protected>} />
       <Route path="/assistant" element={<Protected><AssistantPage /></Protected>} />
       <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
