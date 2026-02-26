@@ -1,14 +1,30 @@
-﻿fastapi==0.115.6
+﻿# Web framework & server
+fastapi==0.115.6
 uvicorn[standard]==0.34.0
 gunicorn==23.0.0
+
+# Config & validation
 pydantic==2.10.6
 pydantic-settings==2.7.1
+
+# Database
 motor==3.6.1
 pymongo==4.9.2
+
+# File uploads
 python-multipart==0.0.20
+
+# Data / ML
 pandas==2.2.3
 numpy==2.2.2
 scikit-learn==1.6.1
 shap==0.46.0
+
+# AI
 openai==1.60.2
+
+# Auth
 firebase-admin==6.6.0
+
+# Rate limiting
+slowapi==0.1.9
