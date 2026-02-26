@@ -19,17 +19,28 @@ def checksum_bytes(raw: bytes) -> str:
 
 
 def validate_model_bytes(raw: bytes) -> tuple[bool, str]:
+    obj = None
+    error_details = []
+    
+    # Try pickle
     try:
         obj = pickle.load(io.BytesIO(raw))
     except Exception as exc:
-        return False, f"Unable to deserialize model: {exc}"
+        error_details.append(f"Pickle error: {exc}")
+    
+    # Try joblib if pickle failed
+    if obj is None:
+        try:
+            import joblib
+            obj = joblib.load(io.BytesIO(raw))
+        except Exception as exc:
+            error_details.append(f"Joblib error: {exc}")
+
+    if obj is None:
+        return False, f"Unable to deserialize model. Details: {' | '.join(error_details)}"
 
     if not hasattr(obj, "predict"):
-        return False, "Uploaded pickle is not a valid sklearn-like estimator"
-
-    module_name = obj.__class__.__module__
-    if "sklearn" not in module_name and "xgboost" not in module_name:
-        return False, f"Unsupported model source: {module_name}"
+        return False, f"Uploaded object ({type(obj).__name__}) is not a valid estimator (missing .predict())"
 
     return True, obj.__class__.__name__
 

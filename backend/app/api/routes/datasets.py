@@ -218,13 +218,40 @@ async def dataset_schema(dataset_id: str, user=Depends(verify_token)):
     # Fallback to reading file if schema not in DB (for older uploads)
     try:
         storage_path = resolve_artifact_path(doc, "dataset")
-    except ArtifactStorageError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    try:
         df = pd.read_csv(storage_path)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Unable to read dataset: {exc}") from exc
+    except (ArtifactStorageError, Exception) as exc:
+        LOGGER.warning("Could not read file for schema, falling back to cached preview keys: %s", exc)
+        # Attempt to reconstruct basic schema from preview keys
+        preview = doc.get("preview_sample") or []
+        if not preview:
+            raise HTTPException(
+                status_code=400, 
+                detail="Dataset file missing and no cached metadata available. Please re-upload."
+            ) from exc
+            
+        columns = []
+        for col in preview[0].keys():
+            columns.append({
+                "name": col,
+                "type": "unknown",
+                "dtype": "unknown (missing file)",
+                "missing_count": 0,
+                "missing_ratio": 0.0,
+                "unique_count": 0,
+            })
+        
+        return {
+            "success": True,
+            "data": {
+                "dataset_id": dataset_id,
+                "name": doc.get("name"),
+                "row_count": doc.get("row_count"),
+                "column_count": doc.get("column_count"),
+                "columns": columns,
+                "from_cache": True,
+                "error": "Original file missing, schema reconstructed from preview"
+            },
+        }
 
     columns = []
     for col in df.columns:
