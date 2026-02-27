@@ -14,7 +14,6 @@ const NAV_SECTIONS = [
     links: [
       { label: 'Governance', path: '/governance', icon: 'GV' },
       { label: 'Drift Monitor', path: '/drift', icon: 'DR' },
-      { label: 'Fraud Detection', path: '/fraud', icon: 'FD' },
       { label: 'Audit Logs', path: '/audit-logs', icon: 'AL' },
       { label: 'Reports', path: '/reports', icon: 'RP' },
     ],

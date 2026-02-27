@@ -131,12 +131,7 @@ All routes mounted under `/api` (except `/chat` backward-compat direct path).
 - `GET /chat`
   - History/session retrieval.
 
-### 4.9 Fraud (`/api/fraud`)
-- `POST /transactions`
-- `GET /transactions`
-- `GET /stats`
-
-### 4.10 Platform Aliases (`/api` direct alias routes)
+### 4.9 Platform Aliases (`/api` direct alias routes)
 - `/upload-model`, `/upload-dataset`, `/compute-metrics`, `/compute-shap`, `/bias-analysis`, `/drift-analysis`, `/trust-score`, `/audit-log`, `/generate-report`
 - These map to primary routes for compatibility with alternate clients.
 

@@ -84,7 +84,6 @@ docker compose up --build
 - SHAP explainability engine
 - Governance and trust scoring
 - Drift monitor and alerts
-- Fraud Intelligence (Real-time ML scoring & multi-user isolation)
 - AI assistant (OpenAI via backend)
 - Reports center and audit logging
 

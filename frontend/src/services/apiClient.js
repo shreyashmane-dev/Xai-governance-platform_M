@@ -4,13 +4,11 @@ import { auth } from './firebase'
 function normalizeApiBaseUrl() {
   const env = import.meta.env || {}
   const raw = (
-    env.VITE_API_URL || 
     env.VITE_API_BASE_URL || 
-    env.NEXT_PUBLIC_API_URL || 
-    'http://localhost:8000'
+    'http://localhost:8000/api'
   ).trim().replace(/\/+$/, '')
   
-  return raw.endsWith('/api') ? raw : `${raw}/api`
+  return raw
 }
 
 const api = axios.create({

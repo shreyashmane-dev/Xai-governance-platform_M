@@ -6,7 +6,6 @@ from app.api.routes import (
     datasets,
     drift,
     evaluations,
-    fraud,
     governance,
     models,
     platform,
@@ -24,5 +23,4 @@ api_router.include_router(governance.router, prefix="/governance", tags=["govern
 api_router.include_router(drift.router, prefix="/drift", tags=["drift"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
-api_router.include_router(fraud.router, prefix="/fraud", tags=["fraud"])
 api_router.include_router(platform.router, tags=["platform"])

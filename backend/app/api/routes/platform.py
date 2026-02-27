@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, Request
 
 from app.api.routes.analytics import compute_metrics, compute_shap
 from app.api.routes.datasets import upload_dataset
@@ -15,13 +15,14 @@ router = APIRouter()
 
 @router.post("/upload-model")
 async def upload_model_alias(
+    request: Request,
     name: str = Form(...),
     version: str = Form("v1"),
     target_column: str = Form("target"),
     file: UploadFile = File(...),
     user=Depends(verify_token),
 ):
-    return await upload_model(name=name, version=version, target_column=target_column, file=file, user=user)
+    return await upload_model(request=request, name=name, version=version, target_column=target_column, file=file, user=user)
 
 
 @router.post("/upload-dataset")
