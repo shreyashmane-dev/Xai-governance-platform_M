@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: xai-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    container_name: xai-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      ENVIRONMENT: development
+      PORT: 10000
+      MONGODB_URI: mongodb://mongo:27017
+      MONGO_DB_NAME: xai_platform
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-local_dev_key}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-local-project}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-local-private-key}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-local@example.com}
+      BACKEND_CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      UPLOAD_DIR: uploads
+      MAX_UPLOAD_MB: 50
+      ARTIFACT_CACHE_DIR: uploads
+      STRICT_FEATURE_COMPATIBILITY: "true"
+    ports:
+      - "8000:10000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/storage:/app/storage
+      - ./backend/data:/app/data
+
+  frontend:
+    build: ./frontend
+    container_name: xai-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  mongo_data:

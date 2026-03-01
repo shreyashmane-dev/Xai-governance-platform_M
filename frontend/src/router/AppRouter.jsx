@@ -14,6 +14,7 @@ import AboutPage from '../pages/AboutPage'
 import DocsPage from '../pages/DocsPage'
 import AuditLogsPage from '../pages/AuditLogsPage'
 import FunctionsPage from '../pages/FunctionsPage'
+import SystemPage from '../pages/SystemPage'
 import AppLayout from '../layouts/AppLayout'
 import useRequireAuth from '../hooks/useRequireAuth'
 
@@ -43,6 +44,7 @@ export default function AppRouter() {
       <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
       <Route path="/functions" element={<Protected><FunctionsPage /></Protected>} />
       <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
+      <Route path="/system" element={<Protected><SystemPage /></Protected>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )

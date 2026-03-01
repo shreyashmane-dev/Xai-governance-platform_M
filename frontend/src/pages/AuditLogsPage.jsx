@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { systemService } from '../services'
+import { governanceService, systemService } from '../services'
 import { EmptyState, Loader } from '../components/feedback/States'
 import { getApiErrorMessage } from '../utils/apiError'
 
@@ -13,6 +13,7 @@ export default function AuditLogsPage() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [downloadLoading, setDownloadLoading] = useState(false)
   const [action, setAction] = useState('')
   const [entityType, setEntityType] = useState('')
 
@@ -45,6 +46,26 @@ export default function AuditLogsPage() {
     })
   }, [rows, action, entityType])
 
+  async function downloadAuditLogs() {
+    setDownloadLoading(true)
+    try {
+      const res = await governanceService.downloadAudit()
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.download = 'audit_logs.csv'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setDownloadLoading(false)
+    }
+  }
+
   if (loading) return <Loader text="Loading audit logs..." />
 
   return (
@@ -69,6 +90,9 @@ export default function AuditLogsPage() {
           />
           <button className="btn-primary" onClick={load}>
             Refresh
+          </button>
+          <button className="btn-secondary" onClick={downloadAuditLogs} disabled={downloadLoading}>
+            {downloadLoading ? 'Downloading...' : 'Download Audit Logs'}
           </button>
         </div>
       </div>

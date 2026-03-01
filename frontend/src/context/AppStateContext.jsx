@@ -13,6 +13,7 @@ const initialState = {
   chatHistory: [],
   notifications: [],
   searchQuery: '',
+  systemResources: null,
 }
 
 const AppStateContext = createContext(null)

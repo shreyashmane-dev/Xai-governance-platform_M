@@ -16,6 +16,7 @@ const NAV_SECTIONS = [
       { label: 'Drift Monitor', path: '/drift', icon: 'DR' },
       { label: 'Audit Logs', path: '/audit-logs', icon: 'AL' },
       { label: 'Reports', path: '/reports', icon: 'RP' },
+      { label: 'System', path: '/system', icon: 'SY' },
     ],
   },
   {

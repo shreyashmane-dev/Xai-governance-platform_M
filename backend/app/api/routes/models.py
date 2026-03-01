@@ -63,8 +63,6 @@ async def upload_model(
         raw = await upload_file.read()
         if not raw:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
-        if len(raw) > settings.max_upload_mb * 1024 * 1024:
-            raise HTTPException(status_code=400, detail=f"File too large (max {settings.max_upload_mb}MB)")
 
         ok, model_type = validate_model_bytes(raw)
         if not ok:

@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 import os
+import shutil
 
 from fastapi import APIRouter, Depends
 from fastapi.routing import APIRoute
+import psutil
 
 from app.core.config import settings
 from app.core.security import verify_token
@@ -11,6 +13,22 @@ from app.utils.audit import write_audit
 
 router = APIRouter()
 BOOTED_AT = datetime.now(timezone.utc)
+
+
+@router.get("/metrics")
+def get_metrics():
+    cpu = psutil.cpu_percent(interval=1)
+    memory = psutil.virtual_memory()
+    try:
+        disk = psutil.disk_usage("C:\\")
+    except Exception:
+        disk = psutil.disk_usage(".")
+
+    return {
+        "cpu_usage": cpu,
+        "memory_usage": memory.percent,
+        "disk_usage": disk.percent,
+    }
 
 
 @router.get("/status")
@@ -196,3 +214,88 @@ async def self_test(user=Depends(verify_token)):
             "checks": checks,
         },
     }
+@router.get("/storage")
+async def list_local_storage(user=Depends(verify_token)):
+    """List local data files and their sizes."""
+    base_path = "data"
+    db_name = settings.mongo_db_name
+    db_path = os.path.join(base_path, db_name)
+    
+    if not os.path.exists(db_path):
+        return {"success": True, "data": []}
+    
+    files = []
+    for filename in os.listdir(db_path):
+        if filename.endswith(".json"):
+            file_path = os.path.join(db_path, filename)
+            stats = os.stat(file_path)
+            files.append({
+                "collection": filename[:-5],
+                "size_bytes": stats.st_size,
+                "last_modified": datetime.fromtimestamp(stats.st_mtime, timezone.utc).isoformat()
+            })
+    
+    return {"success": True, "data": files}
+
+
+@router.get("/resources")
+async def system_resources(user=Depends(verify_token)):
+    """Get basic system resource usage."""
+    try:
+        import psutil
+    except ImportError:
+        disk = shutil.disk_usage(".")
+        return {
+            "success": True,
+            "data": {
+                "cpu_percent": 0.0,
+                "memory": None,
+                "disk": {
+                    "total": disk.total,
+                    "free": disk.free,
+                    "used": disk.used,
+                    "percent": round((disk.used / max(disk.total, 1)) * 100.0, 2),
+                },
+                "warning": "psutil is not installed",
+            },
+        }
+    
+    cpu_percent = psutil.cpu_percent(interval=None)
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage('.')
+    
+    return {
+        "success": True,
+        "data": {
+            "cpu_percent": cpu_percent,
+            "memory": {
+                "total": memory.total,
+                "available": memory.available,
+                "used": memory.used,
+                "percent": memory.percent
+            },
+            "disk": {
+                "total": disk.total,
+                "free": disk.free,
+                "used": disk.used,
+                "percent": disk.percent
+            }
+        }
+    }
+
+
+@router.delete("/storage/{collection}")
+async def delete_local_collection(collection: str, user=Depends(verify_token)):
+    """Delete a specific local collection file."""
+    base_path = "data"
+    db_name = settings.mongo_db_name
+    file_path = os.path.join(base_path, db_name, f"{collection}.json")
+    
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            return {"success": True, "message": f"Collection '{collection}' deleted"}
+        except OSError as exc:
+            return {"success": False, "detail": str(exc)}
+            
+    return {"success": False, "detail": "Collection not found"}

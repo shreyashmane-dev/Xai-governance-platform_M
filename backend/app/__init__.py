@@ -1,4 +1,2 @@
-﻿from app.main import app
+"""Backend application package."""
 
-
-__all__ = ['app']

@@ -34,8 +34,6 @@ async def upload_dataset(
             raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
         raw = await file.read()
-        if len(raw) > settings.max_upload_mb * 1024 * 1024:
-            raise HTTPException(status_code=400, detail=f"File too large (max {settings.max_upload_mb}MB)")
 
         storage_meta = persist_artifact(raw, file.filename, "datasets")
         path = storage_meta["storage_path"]

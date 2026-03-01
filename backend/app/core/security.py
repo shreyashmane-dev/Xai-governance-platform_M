@@ -46,7 +46,9 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(bear
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
     try:
-        decoded = auth.verify_id_token(credentials.credentials, check_revoked=True)
+        # Revocation checks add network latency; keep strict checks in production.
+        check_revoked = settings.environment == "production"
+        decoded = auth.verify_id_token(credentials.credentials, check_revoked=check_revoked)
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 

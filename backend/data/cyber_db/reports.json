@@ -1,0 +1,380 @@
+[
+  {
+    "tenant_id": "default",
+    "model_id": "69a3ca86c0d7a31c215194df",
+    "dataset_id": "69a3ca87c0d7a31c215194e1",
+    "snapshot": {
+      "model_id": "69a3ca86c0d7a31c215194df",
+      "dataset_id": "69a3ca87c0d7a31c215194e1",
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "f1_score": 1.0,
+        "confusion_matrix": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "target_column": "Marks"
+      },
+      "shap_summary": {
+        "global_importance": [
+          {
+            "feature": "Hours",
+            "value": 19.31818181818182
+          }
+        ],
+        "feature_importance": [
+          {
+            "feature": "Hours",
+            "value": 19.31818181818182
+          }
+        ],
+        "shap_values": [
+          {
+            "row_index": 0,
+            "values": {
+              "Hours": -34.77272727272727
+            }
+          },
+          {
+            "row_index": 1,
+            "values": {
+              "Hours": -27.045454545454547
+            }
+          },
+          {
+            "row_index": 2,
+            "values": {
+              "Hours": -19.31818181818182
+            }
+          },
+          {
+            "row_index": 3,
+            "values": {
+              "Hours": -11.590909090909092
+            }
+          },
+          {
+            "row_index": 4,
+            "values": {
+              "Hours": -3.8636363636363638
+            }
+          },
+          {
+            "row_index": 5,
+            "values": {
+              "Hours": 3.8636363636363638
+            }
+          },
+          {
+            "row_index": 6,
+            "values": {
+              "Hours": 11.590909090909092
+            }
+          },
+          {
+            "row_index": 7,
+            "values": {
+              "Hours": 19.31818181818182
+            }
+          },
+          {
+            "row_index": 8,
+            "values": {
+              "Hours": 27.045454545454547
+            }
+          },
+          {
+            "row_index": 9,
+            "values": {
+              "Hours": 34.77272727272727
+            }
+          }
+        ],
+        "sample_size": 10,
+        "method": "shap"
+      },
+      "governance": {
+        "tenant_id": "default",
+        "model_id": "69a3ca86c0d7a31c215194df",
+        "dataset_id": "69a3ca87c0d7a31c215194e1",
+        "dataset_size": 10,
+        "feature_count": 1,
+        "missing_values": 0,
+        "model_type": "LinearRegression",
+        "prediction_sample": [
+          18.727272727272727,
+          26.454545454545453,
+          34.18181818181819,
+          41.90909090909091,
+          49.63636363636364,
+          57.36363636363637,
+          65.0909090909091,
+          72.81818181818181,
+          80.54545454545455,
+          88.27272727272728
+        ],
+        "target_column": "Marks",
+        "metrics": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "f1_score": 1.0,
+          "confusion_matrix": [
+            [
+              5,
+              0
+            ],
+            [
+              0,
+              5
+            ]
+          ]
+        },
+        "fairness_score": 50.0,
+        "quality_score": 100.0,
+        "trust_score": 80.0,
+        "risk_classification": "low",
+        "bias_findings": [],
+        "subgroup_analysis": [],
+        "created_at": "2026-03-01 05:43:03.738222+00:00"
+      },
+      "drift": {
+        "tenant_id": "default",
+        "baseline_dataset_id": "69a3d17d4336a6a3f3a75a76",
+        "current_dataset_id": "69a3ca87c0d7a31c215194e1",
+        "features": [
+          {
+            "feature": "Hours",
+            "psi": 0.0,
+            "status": "ok",
+            "baseline_mean": 5.5,
+            "current_mean": 5.5
+          },
+          {
+            "feature": "Marks",
+            "psi": 0.0,
+            "status": "ok",
+            "baseline_mean": 53.5,
+            "current_mean": 53.5
+          }
+        ],
+        "alert_count": 0,
+        "alerts": [],
+        "advanced": {
+          "numeric_feature_count": 2,
+          "categorical_feature_count": 0,
+          "avg_psi": 0.0,
+          "avg_js_divergence": 0.0,
+          "distribution_shift_score": 0.0,
+          "stability_score": 100.0,
+          "severity": "low"
+        },
+        "created_at": "2026-03-01T05:43:14.446340+00:00"
+      }
+    },
+    "trust_score": 80.0,
+    "checksum": "2c33985171f786e6374df77d76ed523283b6e5460b9b92168a63fc3605e99172",
+    "generated_by": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
+    "generated_at": "2026-03-01 05:43:40.385883+00:00",
+    "_id": "69a3d20c4336a6a3f3a75a87"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "69a3d17c4336a6a3f3a75a74",
+    "dataset_id": "69a3d17d4336a6a3f3a75a76",
+    "snapshot": {
+      "model_id": "69a3d17c4336a6a3f3a75a74",
+      "dataset_id": "69a3d17d4336a6a3f3a75a76",
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "f1_score": 1.0,
+        "confusion_matrix": [
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "target_column": "Marks"
+      },
+      "shap_summary": {
+        "global_importance": [
+          {
+            "feature": "Hours",
+            "value": 19.31818181818182
+          }
+        ],
+        "feature_importance": [
+          {
+            "feature": "Hours",
+            "value": 19.31818181818182
+          }
+        ],
+        "shap_values": [
+          {
+            "row_index": 0,
+            "values": {
+              "Hours": -34.77272727272727
+            }
+          },
+          {
+            "row_index": 1,
+            "values": {
+              "Hours": -27.045454545454547
+            }
+          },
+          {
+            "row_index": 2,
+            "values": {
+              "Hours": -19.31818181818182
+            }
+          },
+          {
+            "row_index": 3,
+            "values": {
+              "Hours": -11.590909090909092
+            }
+          },
+          {
+            "row_index": 4,
+            "values": {
+              "Hours": -3.8636363636363638
+            }
+          },
+          {
+            "row_index": 5,
+            "values": {
+              "Hours": 3.8636363636363638
+            }
+          },
+          {
+            "row_index": 6,
+            "values": {
+              "Hours": 11.590909090909092
+            }
+          },
+          {
+            "row_index": 7,
+            "values": {
+              "Hours": 19.31818181818182
+            }
+          },
+          {
+            "row_index": 8,
+            "values": {
+              "Hours": 27.045454545454547
+            }
+          },
+          {
+            "row_index": 9,
+            "values": {
+              "Hours": 34.77272727272727
+            }
+          }
+        ],
+        "sample_size": 10,
+        "method": "shap"
+      },
+      "governance": {
+        "tenant_id": "default",
+        "model_id": "69a3d17c4336a6a3f3a75a74",
+        "dataset_id": "69a3d17d4336a6a3f3a75a76",
+        "dataset_size": 10,
+        "feature_count": 1,
+        "missing_values": 0,
+        "model_type": "LinearRegression",
+        "prediction_sample": [
+          18.727272727272727,
+          26.454545454545453,
+          34.18181818181819,
+          41.90909090909091,
+          49.63636363636364,
+          57.36363636363637,
+          65.0909090909091,
+          72.81818181818181,
+          80.54545454545455,
+          88.27272727272728
+        ],
+        "target_column": "Marks",
+        "metrics": {
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "f1_score": 1.0,
+          "confusion_matrix": [
+            [
+              5,
+              0
+            ],
+            [
+              0,
+              5
+            ]
+          ]
+        },
+        "fairness_score": 50.0,
+        "quality_score": 100.0,
+        "trust_score": 80.0,
+        "risk_classification": "low",
+        "bias_findings": [],
+        "subgroup_analysis": [],
+        "created_at": "2026-03-01 06:07:15.214667+00:00"
+      },
+      "drift": {
+        "tenant_id": "default",
+        "baseline_dataset_id": "69a3d17d4336a6a3f3a75a76",
+        "current_dataset_id": "69a3ca87c0d7a31c215194e1",
+        "features": [
+          {
+            "feature": "Hours",
+            "psi": 0.0,
+            "status": "ok",
+            "baseline_mean": 5.5,
+            "current_mean": 5.5
+          },
+          {
+            "feature": "Marks",
+            "psi": 0.0,
+            "status": "ok",
+            "baseline_mean": 53.5,
+            "current_mean": 53.5
+          }
+        ],
+        "alert_count": 0,
+        "alerts": [],
+        "advanced": {
+          "numeric_feature_count": 2,
+          "categorical_feature_count": 0,
+          "avg_psi": 0.0,
+          "avg_js_divergence": 0.0,
+          "distribution_shift_score": 0.0,
+          "stability_score": 100.0,
+          "severity": "low"
+        },
+        "created_at": "2026-03-01T06:07:20.769541+00:00"
+      }
+    },
+    "trust_score": 80.0,
+    "checksum": "12508847cd0267972f630cb682734217499726c1d6ed0937f8519cace17e522d",
+    "generated_by": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
+    "generated_at": "2026-03-01 06:07:37.685472+00:00",
+    "_id": "69a3d7a932cc649ef15c02f5"
+  }
+]

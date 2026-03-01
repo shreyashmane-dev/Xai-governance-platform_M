@@ -7,4 +7,5 @@ export const governanceService = {
     const withSensitive = trimmed ? `${base}&sensitive_column=${encodeURIComponent(trimmed)}` : base
     return api.post(withSensitive)
   },
+  downloadAudit: () => api.get('/governance/audit/download', { responseType: 'blob' }),
 }

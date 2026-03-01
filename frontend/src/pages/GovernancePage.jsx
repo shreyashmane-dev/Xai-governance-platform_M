@@ -1,34 +1,85 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { governanceService } from '../services'
-import { EmptyState } from '../components/feedback/States'
+import { datasetService, governanceService, modelService } from '../services'
+import { EmptyState, Loader } from '../components/feedback/States'
 import { useAppState } from '../context/AppStateContext'
 import { getApiErrorMessage } from '../utils/apiError'
 
 export default function GovernancePage() {
   const { state, actions } = useAppState()
+  const [models, setModels] = useState([])
+  const [datasets, setDatasets] = useState([])
+  const [selectedModelId, setSelectedModelId] = useState('')
+  const [selectedDatasetId, setSelectedDatasetId] = useState('')
+  const [selectorLoading, setSelectorLoading] = useState(true)
+  const [selectorError, setSelectorError] = useState('')
   const [loading, setLoading] = useState(false)
   const [sensitiveColumn, setSensitiveColumn] = useState('')
+  const [runError, setRunError] = useState('')
+
+  useEffect(() => {
+    async function loadAssets() {
+      setSelectorLoading(true)
+      setSelectorError('')
+      try {
+        const [modelsRes, datasetsRes] = await Promise.all([modelService.list(), datasetService.list()])
+        const modelRows = modelsRes?.data?.data || []
+        const datasetRows = datasetsRes?.data?.data || []
+        setModels(modelRows)
+        setDatasets(datasetRows)
+
+        const defaultModel = state.activeModel || modelRows[0] || null
+        const defaultDataset = state.dataset || datasetRows[0] || null
+        setSelectedModelId(defaultModel?.id || '')
+        setSelectedDatasetId(defaultDataset?.id || '')
+        actions.patch({ activeModel: defaultModel, dataset: defaultDataset })
+      } catch (err) {
+        setSelectorError(getApiErrorMessage(err))
+      } finally {
+        setSelectorLoading(false)
+      }
+    }
+    loadAssets()
+  }, [])
+
+  function syncSelection(modelId, datasetId) {
+    const model = models.find((row) => row.id === modelId) || null
+    const dataset = datasets.find((row) => row.id === datasetId) || null
+    actions.patch({ activeModel: model, dataset })
+  }
 
   async function run() {
-    if (!state.activeModel || !state.dataset) return
+    if (!selectedModelId || !selectedDatasetId) return
     setLoading(true)
+    setRunError('')
     try {
-      const res = await governanceService.run(state.activeModel.id, state.dataset.id, sensitiveColumn)
+      const res = await governanceService.run(selectedModelId, selectedDatasetId, sensitiveColumn)
       actions.patch({
         governanceReport: res.data.data,
         trustScore: res.data.data.trust_score,
       })
-      actions.addNotification({ type: 'success', title: 'Governance completed', message: `Trust score: ${res.data.data.trust_score}` })
+      actions.addNotification({
+        type: 'success',
+        title: 'Governance completed',
+        message: `Trust score: ${res?.data?.data?.trust_score}`,
+      })
     } catch (err) {
-      actions.addNotification({ type: 'error', title: 'Governance failed', message: getApiErrorMessage(err) })
+      const message = getApiErrorMessage(err)
+      setRunError(message)
+      actions.addNotification({ type: 'error', title: 'Governance failed', message })
     } finally {
       setLoading(false)
     }
   }
 
-  if (!state.activeModel || !state.dataset) return <EmptyState title="Missing assets" description="Upload model and dataset first." />
-
+  const activeModel = useMemo(
+    () => models.find((row) => row.id === selectedModelId) || state.activeModel || null,
+    [models, selectedModelId, state.activeModel]
+  )
+  const activeDataset = useMemo(
+    () => datasets.find((row) => row.id === selectedDatasetId) || state.dataset || null,
+    [datasets, selectedDatasetId, state.dataset]
+  )
   const report = state.governanceReport
   const scoreData = useMemo(
     () =>
@@ -42,26 +93,68 @@ export default function GovernancePage() {
     [report]
   )
 
+  if (selectorLoading) return <Loader text="Loading models and datasets..." />
+  if (selectorError) return <EmptyState title="Selector load failed" description={selectorError} />
+  if (!models.length || !datasets.length) {
+    return <EmptyState title="Missing assets" description="Upload model and dataset first." />
+  }
+
   return (
     <div data-tour="governance" className="space-y-4">
-      <div className="card flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">Governance & Bias Panel</h3>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Run fairness metrics, explainability checks, subgroup analysis, and compliance risk logic.
-          </p>
+      <div className="card space-y-3">
+        <h3 className="text-lg font-semibold">Governance & Bias Panel</h3>
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="space-y-1">
+            <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Select Model</label>
+            <select
+              value={selectedModelId}
+              onChange={(event) => {
+                const next = event.target.value
+                setSelectedModelId(next)
+                syncSelection(next, selectedDatasetId)
+              }}
+            >
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Select Dataset</label>
+            <select
+              value={selectedDatasetId}
+              onChange={(event) => {
+                const next = event.target.value
+                setSelectedDatasetId(next)
+                syncSelection(selectedModelId, next)
+              }}
+            >
+              {datasets.map((dataset) => (
+                <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Sensitive column (optional)</label>
+            <input
+              placeholder="e.g. gender, segment"
+              value={sensitiveColumn}
+              onChange={(event) => setSensitiveColumn(event.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            className="min-w-[220px]"
-            placeholder="Sensitive column (optional)"
-            value={sensitiveColumn}
-            onChange={(event) => setSensitiveColumn(event.target.value)}
-          />
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Model: {activeModel?.name} | Dataset: {activeDataset?.name}
+          </div>
           <button className="btn-primary" onClick={run} disabled={loading}>
             {loading ? 'Running...' : 'Run Governance Scan'}
           </button>
         </div>
+        {runError && <div className="text-sm text-rose-600">{runError}</div>}
       </div>
 
       {!report ? (
@@ -94,8 +187,8 @@ export default function GovernancePage() {
                   {report.subgroup_analysis.map((row) => (
                     <tr key={row.group} className="border-b" style={{ borderColor: 'var(--border-muted)' }}>
                       <td>{row.group}</td>
-                      <td>{(row.positive_prediction_rate * 100).toFixed(2)}%</td>
-                      <td>{row.true_positive_rate == null ? 'n/a' : `${(row.true_positive_rate * 100).toFixed(2)}%`}</td>
+                      <td>{(Number(row.positive_prediction_rate || 0) * 100).toFixed(2)}%</td>
+                      <td>{row.true_positive_rate == null ? 'n/a' : `${(Number(row.true_positive_rate) * 100).toFixed(2)}%`}</td>
                     </tr>
                   ))}
                 </tbody>

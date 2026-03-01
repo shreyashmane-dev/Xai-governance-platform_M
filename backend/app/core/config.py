@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = Field(30, alias="REQUEST_TIMEOUT_SECONDS")
     chat_rate_limit: int = Field(30, alias="CHAT_RATE_LIMIT")
     chat_rate_window_seconds: int = Field(300, alias="CHAT_RATE_WINDOW_SECONDS")
+    shap_max_samples: int = Field(80, alias="SHAP_MAX_SAMPLES")
+    shap_background_samples: int = Field(50, alias="SHAP_BACKGROUND_SAMPLES")
+    shap_output_rows: int = Field(10, alias="SHAP_OUTPUT_ROWS")
 
     api_key: Optional[str] = Field(None, alias="API_KEY")
 

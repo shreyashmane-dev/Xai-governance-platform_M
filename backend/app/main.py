@@ -9,6 +9,13 @@ import asyncio
 import logging
 import os
 from uuid import uuid4
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional in some local environments
+    load_dotenv = None
+
+if load_dotenv:
+    load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -25,7 +32,7 @@ from app.api.router import api_router
 from app.api.routes import chat as chat_routes
 from app.core.config import settings
 from app.core.security import init_firebase
-from app.db.mongo import close_client, ensure_indexes
+from app.db.mongo import close_client, ensure_indexes, check_connection
 
 logging.basicConfig(
     level=logging.INFO if settings.environment == "production" else logging.DEBUG,
@@ -40,25 +47,41 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     env_name = os.getenv("ENVIRONMENT", settings.environment)
-    port_val = os.getenv("PORT", "unknown")
+    port_val = int(os.environ.get("PORT", settings.port))
+    origins = get_cors_origins()
+    
+    print("\n" + "=" * 50)
+    print(f"Server running on port: {port_val}")
+    print(f"Environment: {env_name}")
+    print(f"CORS Origins allowed: {origins if settings.backend_cors_origins != '*' else '*'}")
+    print("=" * 50 + "\n")
+
     LOGGER.info("Starting up XAI Governance API (env=%s, port=%s)", env_name, port_val)
 
     try:
         os.makedirs(settings.upload_dir, exist_ok=True)
+        os.makedirs(os.path.join("storage", "models"), exist_ok=True)
+        os.makedirs(os.path.join("storage", "datasets"), exist_ok=True)
         LOGGER.info("Upload directory verified: %s", settings.upload_dir)
     except Exception as exc:
         LOGGER.error("Failed to create upload directory %s: %s", settings.upload_dir, exc)
 
     init_firebase()
-    try:
-        await asyncio.wait_for(ensure_indexes(), timeout=15)
-        LOGGER.info("MongoDB indexes verified")
-    except asyncio.TimeoutError:
-        LOGGER.warning("MongoDB index creation timed out, continuing")
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.error("Critical MongoDB index error: %s", exc)
-        if settings.is_production:
-            pass
+    
+    # Non-blocking DB connection check
+    db_connected = await check_connection()
+    if db_connected:
+        print("Database Connected")
+        LOGGER.info("MongoDB connection successful")
+        try:
+            # Run index creation in background to not block startup
+            asyncio.create_task(ensure_indexes())
+            LOGGER.info("MongoDB index verification started in background")
+        except Exception as exc:
+            LOGGER.error("Failed to start index verification: %s", exc)
+    else:
+        print("Database Connection Failed")
+        LOGGER.error("MongoDB connection failed at startup")
 
     yield
 
@@ -79,47 +102,37 @@ app = FastAPI(
 app.state.limiter = limiter
 
 
-cors_origins = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "https://xai-governance-platform.vercel.app",
-    "https://xai-trustops.vercel.app",
-]
-
-# Add any custom origins from settings
-if settings.backend_cors_origins and settings.backend_cors_origins != "*":
-    for origin in settings.backend_cors_origins.split(","):
-        clean = origin.strip()
-        if clean and clean not in cors_origins:
-            cors_origins.append(clean)
-
-if settings.backend_cors_origins == "*":
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origin_regex=r"https?://.*",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
-        max_age=3600,
-    )
-else:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
-        max_age=3600,
-    )
+# Moved CORS origin calculation to be used later in the middleware stack
+def get_cors_origins() -> list[str]:
+    origins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3000",
+        "https://xai-governance-platform.vercel.app",
+        "https://xai-trustops.vercel.app",
+    ]
+    
+    # Add any custom origins from settings, stripping trailing slashes
+    if settings.backend_cors_origins and settings.backend_cors_origins != "*":
+        for origin in settings.backend_cors_origins.split(","):
+            clean = origin.strip().rstrip("/")
+            if clean and clean not in origins:
+                origins.append(clean)
+    
+    return origins
 
 app.add_middleware(SlowAPIMiddleware)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Skip security checks for preflight (CORS) requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         request_id = request.headers.get("X-Request-ID") or uuid4().hex
         request.state.request_id = request_id
         started = datetime.now(timezone.utc)
@@ -158,6 +171,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Add CORSMiddleware LAST so it is the OUTERMOST middleware
+# This ensures it handles OPTIONS requests before anything else
+# CORS configuration
+allowed_origins = get_cors_origins()
+
+# Handle wildcard origins
+allow_all_origins = "*" in allowed_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins if not allow_all_origins else ["*"],
+    allow_credentials=not allow_all_origins,  # Credentials NOT allowed with wildcard "*"
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
+    max_age=3600,
+)
+LOGGER.info("CORS enabled with origins: %s", allowed_origins)
+
 app.include_router(api_router, prefix="/api")
 app.include_router(chat_routes.router, prefix="/chat", tags=["chat"])
 
@@ -176,8 +208,10 @@ async def root():
 
 @app.get("/health", tags=["Health"], summary="Detailed health check")
 async def health():
+    db_connected = await check_connection()
     return {
-        "status": "ok",
+        "status": "ok" if db_connected else "degraded",
+        "database": "connected" if db_connected else "disconnected",
         "started_at": STARTED_AT.isoformat(),
         "storage": {
             "backend": settings.storage_backend,
@@ -242,7 +276,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     LOGGER.exception("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
@@ -250,6 +284,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
             "request_id": getattr(request.state, "request_id", None),
         },
     )
+    # Ensure CORS headers on 500s too, just in case middleware is bypassed
+    origin = request.headers.get("origin")
+    if origin in get_cors_origins():
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 if __name__ == "__main__":
@@ -265,3 +305,4 @@ if __name__ == "__main__":
         proxy_headers=True,
         forwarded_allow_ips="*",
     )
+

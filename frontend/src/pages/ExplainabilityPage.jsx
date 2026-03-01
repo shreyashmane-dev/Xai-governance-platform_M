@@ -1,199 +1,238 @@
-import { useMemo, useState } from 'react'
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Loader, EmptyState } from '../components/feedback/States'
-import { analyticsService } from '../services'
+import { useEffect, useState } from 'react'
+import { EmptyState, Loader } from '../components/feedback/States'
+import { analyticsService, datasetService, modelService, reportService } from '../services'
 import { useAppState } from '../context/AppStateContext'
 import { getApiErrorMessage } from '../utils/apiError'
 
+function ImageBlock({ title, image, mime = 'image/png' }) {
+  return (
+    <div className="space-y-2">
+      <h5 className="font-semibold">{title}</h5>
+      {image ? (
+        <img
+          src={`data:${mime};base64,${image}`}
+          alt={title}
+          className="w-full rounded border"
+          style={{ borderColor: 'var(--border-muted)' }}
+        />
+      ) : (
+        <EmptyState title="Plot unavailable" description="Run SHAP analysis to generate this plot." />
+      )}
+    </div>
+  )
+}
+
 export default function ExplainabilityPage() {
   const { state, actions } = useAppState()
-  const [loading, setLoading] = useState(false)
-  const [localLoading, setLocalLoading] = useState(false)
+  const [models, setModels] = useState([])
+  const [datasets, setDatasets] = useState([])
+  const [selectedModelId, setSelectedModelId] = useState('')
+  const [selectedDatasetId, setSelectedDatasetId] = useState('')
   const [rowIndex, setRowIndex] = useState(0)
-  const [localExplanation, setLocalExplanation] = useState(null)
+  const [selectorLoading, setSelectorLoading] = useState(true)
+  const [selectorError, setSelectorError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [downloadLoading, setDownloadLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const globalImportance = useMemo(() => state.shapValues?.global_importance || [], [state.shapValues])
-  const shapWarning = state.shapValues?.warning
-  const sampleSize = state.shapValues?.sample_size ?? 0
-  const explanationConfidence = Math.min(100, Math.max(18, 20 + sampleSize * 0.25))
-  const topDrivers = useMemo(() => globalImportance.slice(0, 4), [globalImportance])
+  useEffect(() => {
+    async function loadSelectors() {
+      setSelectorLoading(true)
+      setSelectorError('')
+      try {
+        const [modelsRes, datasetsRes] = await Promise.all([modelService.list(), datasetService.list()])
+        const modelRows = modelsRes?.data?.data || []
+        const datasetRows = datasetsRes?.data?.data || []
+        setModels(modelRows)
+        setDatasets(datasetRows)
 
-  async function runShap() {
-    if (!state.activeModel || !state.dataset) return
+        const modelId = (state.activeModel || modelRows[0] || {}).id || ''
+        const datasetId = (state.dataset || datasetRows[0] || {}).id || ''
+        setSelectedModelId(modelId)
+        setSelectedDatasetId(datasetId)
+        actions.patch({
+          activeModel: modelRows.find((m) => m.id === modelId) || state.activeModel || null,
+          dataset: datasetRows.find((d) => d.id === datasetId) || state.dataset || null,
+        })
+      } catch (err) {
+        setSelectorError(getApiErrorMessage(err))
+      } finally {
+        setSelectorLoading(false)
+      }
+    }
+    loadSelectors()
+  }, [])
+
+  function syncSelection(modelId, datasetId) {
+    const model = models.find((row) => row.id === modelId) || null
+    const dataset = datasets.find((row) => row.id === datasetId) || null
+    actions.patch({ activeModel: model, dataset })
+  }
+
+  async function runShap(targetRowIndex = 0) {
+    if (!selectedModelId || !selectedDatasetId) return
     setLoading(true)
+    setError('')
     try {
-      const res = await analyticsService.shap(state.activeModel.id, state.dataset.id)
-      actions.patch({ shapValues: res.data.data })
-      actions.addNotification({ type: 'success', title: 'SHAP completed', message: `Sample size ${res.data.data.sample_size}` })
+      const res = await analyticsService.shap(selectedModelId, selectedDatasetId, targetRowIndex)
+      actions.patch({ shapValues: res?.data?.data || null })
     } catch (err) {
-      actions.addNotification({ type: 'error', title: 'SHAP failed', message: getApiErrorMessage(err) })
+      setError(getApiErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
-  async function runLocalExplanation() {
-    if (!state.activeModel || !state.dataset) return
-    setLocalLoading(true)
+  async function downloadReport() {
+    if (!selectedModelId || !selectedDatasetId) return
+    setDownloadLoading(true)
+    setError('')
     try {
-      const safeIndex = Number.isFinite(rowIndex) ? Math.max(0, Math.floor(rowIndex)) : 0
-      const res = await analyticsService.shapLocal(state.activeModel.id, state.dataset.id, safeIndex)
-      setLocalExplanation(res.data.data)
-      actions.addNotification({ type: 'success', title: 'Local explanation ready', message: `Row ${safeIndex}` })
+      const res = await reportService.download(selectedModelId, selectedDatasetId)
+      const blob = new Blob([res.data], { type: 'application/pdf' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.download = `model_report_${selectedModelId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
     } catch (err) {
-      actions.addNotification({ type: 'error', title: 'Local explanation failed', message: getApiErrorMessage(err) })
-      setLocalExplanation(null)
+      setError(getApiErrorMessage(err))
     } finally {
-      setLocalLoading(false)
+      setDownloadLoading(false)
     }
   }
 
-  if (!state.activeModel || !state.dataset) {
-    return <EmptyState title="Model or dataset missing" description="Use Models page to upload and select both assets." />
-  }
+  if (selectorLoading) return <Loader text="Loading model and dataset selectors..." />
+  if (selectorError) return <EmptyState title="Failed to load selectors" description={selectorError} />
+  if (!models.length || !datasets.length) return <EmptyState title="Missing assets" description="Upload model and dataset first." />
+
+  const shapData = state.shapValues || {}
+  const globalData = shapData.global || {}
+  const localData = shapData.local || {}
+  const globalImageMime = globalData.image_mime || 'image/png'
+  const localImageMime = localData.image_mime || 'image/png'
 
   return (
-    <div data-tour="explainability" className="space-y-4">
-      <div className="card flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">SHAP Explainability Engine</h3>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Global and local feature impact generated from the selected model and dataset.
-          </p>
+    <div className="space-y-4">
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg font-semibold">SHAP Analysis</h3>
+          <button className="btn-secondary" disabled={downloadLoading} onClick={downloadReport}>
+            {downloadLoading ? 'Downloading...' : 'Download Report'}
+          </button>
         </div>
-        <button className="btn-primary" disabled={loading} onClick={runShap}>
-          {loading ? 'Computing...' : 'Run SHAP'}
-        </button>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-1">
+            <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Model Selector</label>
+            <select
+              value={selectedModelId}
+              onChange={(event) => {
+                const next = event.target.value
+                setSelectedModelId(next)
+                syncSelection(next, selectedDatasetId)
+              }}
+            >
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Dataset Selector</label>
+            <select
+              value={selectedDatasetId}
+              onChange={(event) => {
+                const next = event.target.value
+                setSelectedDatasetId(next)
+                syncSelection(selectedModelId, next)
+              }}
+            >
+              {datasets.map((dataset) => (
+                <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button className="btn-primary w-full" disabled={loading} onClick={() => runShap(rowIndex)}>
+              {loading ? 'Running...' : 'Run SHAP Analysis'}
+            </button>
+          </div>
+        </div>
+
+        {error && <div className="text-sm text-rose-600">{error}</div>}
       </div>
 
       {!state.shapValues ? (
-        <EmptyState title="No SHAP results" description="Run SHAP analysis to visualize feature impact." />
+        <EmptyState title="No SHAP results yet" description="Run SHAP analysis first." />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
-          <div className="card space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-lg font-semibold">Global Feature Importance</h4>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Ranked impact scores derived from {sampleSize} rows. Top features contribute most to model decisions.
-                </p>
-              </div>
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                Sample size {sampleSize || 'n/a'}
-              </span>
+        <>
+          <div className="card space-y-4">
+            <h4 className="text-lg font-semibold">Global SHAP</h4>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <ImageBlock title="Summary Plot" image={globalData.summary_plot} mime={globalImageMime} />
+              <ImageBlock title="Feature Importance Bar Chart" image={globalData.bar_plot} mime={globalImageMime} />
+              <ImageBlock title="Beeswarm Plot" image={globalData.beeswarm_plot} mime={globalImageMime} />
+              <ImageBlock title="Dependence Plot" image={globalData.dependence_plot} mime={globalImageMime} />
             </div>
-
-            {globalImportance.length ? (
-              <div className="h-[340px]">
-                <ResponsiveContainer>
-                  <BarChart data={globalImportance.slice(0, 15)} layout="vertical">
-                    <XAxis type="number" />
-                    <YAxis dataKey="feature" type="category" width={170} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[8, 8, 8, 8]} fill="#4f46e5" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed p-4 text-sm" style={{ borderColor: 'var(--border-muted)', color: 'var(--text-muted)' }}>
-                No global importance scores yet. Try re-running SHAP with a dataset that matches the model feature schema.
-              </div>
-            )}
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)' }}>
-                <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>Explanation confidence</span>
-                  <span>{explanationConfidence.toFixed(0)}%</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-slate-200">
-                  <div className="h-2 rounded-full transition-all" style={{ width: `${explanationConfidence}%`, background: 'var(--primary)' }} />
-                </div>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Confidence grows with feature coverage and sample size.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border p-4 space-y-2" style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)' }}>
-                <div className="flex items-center justify-between">
-                  <h5 className="text-sm font-semibold">Top drivers</h5>
-                  <span className="text-[11px] uppercase tracking-wider text-primary-600">{state.shapValues.method || 'unknown'}</span>
-                </div>
-                <ul className="space-y-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  {topDrivers.length ? (
-                    topDrivers.map((driver) => (
-                      <li key={driver.feature} className="flex items-center justify-between">
-                        <span>{driver.feature}</span>
-                        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          {driver.value.toFixed(3)}
-                        </span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs">No drivers to display yet.</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-
-            {shapWarning && <div className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs font-medium text-rose-700">{shapWarning}</div>}
           </div>
 
           <div className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold">Local Prediction Explanation</h4>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Explain a single row to understand feature-level push and pull.
-                </p>
+            <h4 className="text-lg font-semibold">Local SHAP</h4>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Row Selector</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={rowIndex}
+                  onChange={(event) => setRowIndex(Number(event.target.value || 0))}
+                  className="w-36"
+                />
               </div>
-              <span className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                {state.shapValues.method || 'unknown'}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <input
-                type="number"
-                min={0}
-                value={rowIndex}
-                onChange={(event) => setRowIndex(Number(event.target.value || 0))}
-                className="w-28"
-              />
-              <button className="btn-secondary" onClick={runLocalExplanation} disabled={localLoading}>
-                {localLoading ? 'Computing...' : 'Run Local Explanation'}
+              <button className="btn-primary" disabled={loading} onClick={() => runShap(rowIndex)}>
+                {loading ? 'Explaining...' : 'Explain Prediction'}
               </button>
             </div>
 
-            {!localExplanation ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Pick a row index and run local explanation to inspect per-feature contributions.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <div className="rounded-xl border p-3 text-sm" style={{ borderColor: 'var(--border-muted)', background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-                  Row: <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{localExplanation.row_index}</span> | Prediction:{' '}
-                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{JSON.stringify(localExplanation.prediction)}</span>
-                  {localExplanation.probabilities && (
-                    <span className="ml-2 text-xs">Probabilities: {JSON.stringify(localExplanation.probabilities)}</span>
-                  )}
-                </div>
-                <div className="h-[260px]">
-                  <ResponsiveContainer>
-                    <BarChart data={(localExplanation.contributions || []).slice(0, 12)} layout="vertical">
-                      <XAxis type="number" />
-                      <YAxis dataKey="feature" type="category" width={150} />
-                      <Tooltip />
-                      <Bar dataKey="contribution" fill="#10b981" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
+            <div className="grid gap-4 xl:grid-cols-2">
+              <ImageBlock title="Waterfall Plot" image={localData.waterfall_plot} mime={localImageMime} />
+              <ImageBlock title="Force Plot" image={localData.force_plot} mime={localImageMime} />
+            </div>
 
-            {loading && <Loader text="Calculating SHAP values..." />}
+            <div className="overflow-auto rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+              <h5 className="mb-2 font-semibold">Feature Contribution Table</h5>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: 'var(--border-muted)' }}>
+                    <th className="text-left">Feature</th>
+                    <th className="text-left">Value</th>
+                    <th className="text-left">SHAP Impact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(localData.contributions || []).map((row, idx) => (
+                    <tr key={`${row.feature}-${idx}`} className="border-b" style={{ borderColor: 'var(--border-muted)' }}>
+                      <td>{row.feature}</td>
+                      <td>{String(row.value)}</td>
+                      <td>{Number(row.shap_impact || 0).toFixed(6)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="rounded border p-3 text-sm" style={{ borderColor: 'var(--border-muted)' }}>
+              <div><b>Prediction:</b> {localData.prediction == null ? 'N/A' : String(localData.prediction)}</div>
+              <div><b>Base Value:</b> {localData.base_value == null ? 'N/A' : String(localData.base_value)}</div>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

@@ -1,0 +1,441 @@
+[
+  {
+    "tenant_id": "default",
+    "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
+    "name": "customers-100",
+    "version": "v1772297626801",
+    "file_name": "customers-100.csv",
+    "storage_path": "uploads\\customers-100_841a91fd7018.csv",
+    "storage_backend": "local",
+    "storage_key": null,
+    "row_count": 100,
+    "column_count": 12,
+    "columns": [
+      "Index",
+      "Customer Id",
+      "First Name",
+      "Last Name",
+      "Company",
+      "City",
+      "Country",
+      "Phone 1",
+      "Phone 2",
+      "Email",
+      "Subscription Date",
+      "Website"
+    ],
+    "schema": [
+      {
+        "name": "Index",
+        "type": "numeric",
+        "dtype": "int64",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "Customer Id",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "First Name",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 93
+      },
+      {
+        "name": "Last Name",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 97
+      },
+      {
+        "name": "Company",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 99
+      },
+      {
+        "name": "City",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "Country",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 85
+      },
+      {
+        "name": "Phone 1",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "Phone 2",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "Email",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      },
+      {
+        "name": "Subscription Date",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 96
+      },
+      {
+        "name": "Website",
+        "type": "categorical",
+        "dtype": "object",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 100
+      }
+    ],
+    "profile": {
+      "rows": 100,
+      "columns": 12,
+      "null_cells": 0
+    },
+    "preview_sample": [
+      {
+        "Index": 1,
+        "Customer Id": "DD37Cf93aecA6Dc",
+        "First Name": "Sheryl",
+        "Last Name": "Baxter",
+        "Company": "Rasmussen Group",
+        "City": "East Leonard",
+        "Country": "Chile",
+        "Phone 1": "229.077.5154",
+        "Phone 2": "397.884.0519x718",
+        "Email": "zunigavanessa@smith.info",
+        "Subscription Date": "2020-08-24",
+        "Website": "http://www.stephenson.com/"
+      },
+      {
+        "Index": 2,
+        "Customer Id": "1Ef7b82A4CAAD10",
+        "First Name": "Preston",
+        "Last Name": "Lozano",
+        "Company": "Vega-Gentry",
+        "City": "East Jimmychester",
+        "Country": "Djibouti",
+        "Phone 1": "5153435776",
+        "Phone 2": "686-620-1820x944",
+        "Email": "vmata@colon.com",
+        "Subscription Date": "2021-04-23",
+        "Website": "http://www.hobbs.com/"
+      },
+      {
+        "Index": 3,
+        "Customer Id": "6F94879bDAfE5a6",
+        "First Name": "Roy",
+        "Last Name": "Berry",
+        "Company": "Murillo-Perry",
+        "City": "Isabelborough",
+        "Country": "Antigua and Barbuda",
+        "Phone 1": "+1-539-402-0259",
+        "Phone 2": "(496)978-3969x58947",
+        "Email": "beckycarr@hogan.com",
+        "Subscription Date": "2020-03-25",
+        "Website": "http://www.lawrence.com/"
+      },
+      {
+        "Index": 4,
+        "Customer Id": "5Cef8BFA16c5e3c",
+        "First Name": "Linda",
+        "Last Name": "Olsen",
+        "Company": "Dominguez, Mcmillan and Donovan",
+        "City": "Bensonview",
+        "Country": "Dominican Republic",
+        "Phone 1": "001-808-617-6467x12895",
+        "Phone 2": "+1-813-324-8756",
+        "Email": "stanleyblackwell@benson.org",
+        "Subscription Date": "2020-06-02",
+        "Website": "http://www.good-lyons.com/"
+      },
+      {
+        "Index": 5,
+        "Customer Id": "053d585Ab6b3159",
+        "First Name": "Joanna",
+        "Last Name": "Bender",
+        "Company": "Martin, Lang and Andrade",
+        "City": "West Priscilla",
+        "Country": "Slovakia (Slovak Republic)",
+        "Phone 1": "001-234-203-0635x76146",
+        "Phone 2": "001-199-446-3860x3486",
+        "Email": "colinalvarado@miles.net",
+        "Subscription Date": "2021-04-17",
+        "Website": "https://goodwin-ingram.com/"
+      },
+      {
+        "Index": 6,
+        "Customer Id": "2d08FB17EE273F4",
+        "First Name": "Aimee",
+        "Last Name": "Downs",
+        "Company": "Steele Group",
+        "City": "Chavezborough",
+        "Country": "Bosnia and Herzegovina",
+        "Phone 1": "(283)437-3886x88321",
+        "Phone 2": "999-728-1637",
+        "Email": "louis27@gilbert.com",
+        "Subscription Date": "2020-02-25",
+        "Website": "http://www.berger.net/"
+      },
+      {
+        "Index": 7,
+        "Customer Id": "EA4d384DfDbBf77",
+        "First Name": "Darren",
+        "Last Name": "Peck",
+        "Company": "Lester, Woodard and Mitchell",
+        "City": "Lake Ana",
+        "Country": "Pitcairn Islands",
+        "Phone 1": "(496)452-6181x3291",
+        "Phone 2": "+1-247-266-0963x4995",
+        "Email": "tgates@cantrell.com",
+        "Subscription Date": "2021-08-24",
+        "Website": "https://www.le.com/"
+      },
+      {
+        "Index": 8,
+        "Customer Id": "0e04AFde9f225dE",
+        "First Name": "Brett",
+        "Last Name": "Mullen",
+        "Company": "Sanford, Davenport and Giles",
+        "City": "Kimport",
+        "Country": "Bulgaria",
+        "Phone 1": "001-583-352-7197x297",
+        "Phone 2": "001-333-145-0369",
+        "Email": "asnow@colon.com",
+        "Subscription Date": "2021-04-12",
+        "Website": "https://hammond-ramsey.com/"
+      },
+      {
+        "Index": 9,
+        "Customer Id": "C2dE4dEEc489ae0",
+        "First Name": "Sheryl",
+        "Last Name": "Meyers",
+        "Company": "Browning-Simon",
+        "City": "Robersonstad",
+        "Country": "Cyprus",
+        "Phone 1": "854-138-4911x5772",
+        "Phone 2": "+1-448-910-2276x729",
+        "Email": "mariokhan@ryan-pope.org",
+        "Subscription Date": "2020-01-13",
+        "Website": "https://www.bullock.net/"
+      },
+      {
+        "Index": 10,
+        "Customer Id": "8C2811a503C7c5a",
+        "First Name": "Michelle",
+        "Last Name": "Gallagher",
+        "Company": "Beck-Hendrix",
+        "City": "Elaineberg",
+        "Country": "Timor-Leste",
+        "Phone 1": "739.218.2516x459",
+        "Phone 2": "001-054-401-0347x617",
+        "Email": "mdyer@escobar.net",
+        "Subscription Date": "2021-11-08",
+        "Website": "https://arias.com/"
+      }
+    ],
+    "created_at": "2026-02-28 16:53:47.593511+00:00",
+    "_id": "69a31d9d4a2dbc7f1cfbda37"
+  },
+  {
+    "tenant_id": "default",
+    "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
+    "name": "student_data",
+    "version": "v1772341892782",
+    "file_name": "student_data.csv",
+    "storage_path": "uploads\\student_data_d582ebb78094.csv",
+    "storage_backend": "local",
+    "storage_key": null,
+    "row_count": 10,
+    "column_count": 2,
+    "columns": [
+      "Hours",
+      "Marks"
+    ],
+    "schema": [
+      {
+        "name": "Hours",
+        "type": "numeric",
+        "dtype": "int64",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 10
+      },
+      {
+        "name": "Marks",
+        "type": "numeric",
+        "dtype": "int64",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 10
+      }
+    ],
+    "profile": {
+      "rows": 10,
+      "columns": 2,
+      "null_cells": 0
+    },
+    "preview_sample": [
+      {
+        "Hours": 1,
+        "Marks": 20
+      },
+      {
+        "Hours": 2,
+        "Marks": 25
+      },
+      {
+        "Hours": 3,
+        "Marks": 35
+      },
+      {
+        "Hours": 4,
+        "Marks": 40
+      },
+      {
+        "Hours": 5,
+        "Marks": 50
+      },
+      {
+        "Hours": 6,
+        "Marks": 60
+      },
+      {
+        "Hours": 7,
+        "Marks": 65
+      },
+      {
+        "Hours": 8,
+        "Marks": 70
+      },
+      {
+        "Hours": 9,
+        "Marks": 80
+      },
+      {
+        "Hours": 10,
+        "Marks": 90
+      }
+    ],
+    "created_at": "2026-03-01 05:11:35.201386+00:00",
+    "_id": "69a3ca87c0d7a31c215194e1"
+  },
+  {
+    "tenant_id": "default",
+    "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
+    "name": "student_data",
+    "version": "v1772343676492",
+    "file_name": "student_data.csv",
+    "storage_path": "uploads\\student_data_918ba6ee406c.csv",
+    "storage_backend": "local",
+    "storage_key": null,
+    "row_count": 10,
+    "column_count": 2,
+    "columns": [
+      "Hours",
+      "Marks"
+    ],
+    "schema": [
+      {
+        "name": "Hours",
+        "type": "numeric",
+        "dtype": "int64",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 10
+      },
+      {
+        "name": "Marks",
+        "type": "numeric",
+        "dtype": "int64",
+        "missing_count": 0,
+        "missing_ratio": 0.0,
+        "unique_count": 10
+      }
+    ],
+    "profile": {
+      "rows": 10,
+      "columns": 2,
+      "null_cells": 0
+    },
+    "preview_sample": [
+      {
+        "Hours": 1,
+        "Marks": 20
+      },
+      {
+        "Hours": 2,
+        "Marks": 25
+      },
+      {
+        "Hours": 3,
+        "Marks": 35
+      },
+      {
+        "Hours": 4,
+        "Marks": 40
+      },
+      {
+        "Hours": 5,
+        "Marks": 50
+      },
+      {
+        "Hours": 6,
+        "Marks": 60
+      },
+      {
+        "Hours": 7,
+        "Marks": 65
+      },
+      {
+        "Hours": 8,
+        "Marks": 70
+      },
+      {
+        "Hours": 9,
+        "Marks": 80
+      },
+      {
+        "Hours": 10,
+        "Marks": 90
+      }
+    ],
+    "created_at": "2026-03-01 05:41:17.037001+00:00",
+    "_id": "69a3d17d4336a6a3f3a75a76"
+  }
+]

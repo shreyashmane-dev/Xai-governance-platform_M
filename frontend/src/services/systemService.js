@@ -13,4 +13,7 @@ export const systemService = {
     if (nextEntity) params.set('entity_type', nextEntity)
     return api.get(`/system/audit-log?${params.toString()}`)
   },
+  storage: () => api.get('/system/storage'),
+  resources: () => api.get('/system/resources'),
+  deleteStorage: (collection) => api.delete(`/system/storage/${collection}`),
 }
