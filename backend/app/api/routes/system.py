@@ -38,7 +38,8 @@ async def system_status(user=Depends(verify_token)):
         now = datetime.now(timezone.utc)
         uptime_seconds = int((now - BOOTED_AT).total_seconds())
 
-        model_count = await db.models.count_documents({"tenant_id": user["tenant_id"]})
+        from app.utils.local_models import count_local_models
+        model_count = count_local_models(user["tenant_id"])
         dataset_count = await db.datasets.count_documents({"tenant_id": user["tenant_id"]})
         report_count = await db.reports.count_documents({"tenant_id": user["tenant_id"]})
 
@@ -83,12 +84,25 @@ async def reset_tenant_data(user=Depends(verify_token)):
     db = get_db()
     tenant_id = user["tenant_id"]
 
-    model_docs = await db.models.find({"tenant_id": tenant_id}).to_list(10000)
+    from app.utils.local_models import get_local_models, LOCAL_MODELS_FILE
+    import json
+    
+    model_docs = get_local_models(tenant_id)
     dataset_docs = await db.datasets.find({"tenant_id": tenant_id}).to_list(10000)
     file_paths = [d.get("storage_path") for d in model_docs + dataset_docs if d.get("storage_path")]
 
+    # Remove matching models from local JSON store
+    if os.path.exists(LOCAL_MODELS_FILE):
+        try:
+            with open(LOCAL_MODELS_FILE, "r") as f:
+                all_models = json.load(f)
+            remaining = [m for m in all_models if m.get("tenant_id") != tenant_id]
+            with open(LOCAL_MODELS_FILE, "w") as f:
+                json.dump(remaining, f, default=str)
+        except Exception:
+            pass
+
     collections = [
-        db.models,
         db.datasets,
         db.metrics,
         db.shap_reports,

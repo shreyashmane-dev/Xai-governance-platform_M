@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -11,14 +10,16 @@ from openai import OpenAI
 
 from app.core.config import settings
 from app.services.artifact_service import (
+    align_features,
     find_dataset_doc,
     find_model_doc,
     infer_target_column,
+    load_dataset,
+    load_model,
 )
 from app.services.ml_service import compute_classification_metrics
 
 
-BACKEND_ROOT = Path(__file__).resolve().parents[2]
 SYSTEM_PROMPT = (
     "You are an AI Governance Assistant.\n"
     "You analyze machine learning models,\n"
@@ -131,60 +132,6 @@ Score Calculation:
 """.strip()
 
 
-def _resolve_model_path(model_id: str, model_doc: dict) -> Path:
-    candidates = [
-        BACKEND_ROOT / "storage" / "models" / f"{model_id}.pkl",
-        BACKEND_ROOT / "storage" / "models" / f"{model_id}.pickle",
-    ]
-    storage_path = (model_doc.get("storage_path") or "").strip()
-    if storage_path:
-        candidates.extend([Path(storage_path), BACKEND_ROOT / storage_path])
-    file_name = (model_doc.get("file_name") or "").strip()
-    if file_name:
-        candidates.append(BACKEND_ROOT / "uploads" / file_name)
-
-    for path in candidates:
-        if path.exists() and path.is_file():
-            return path
-    raise HTTPException(status_code=404, detail=f"Model artifact not found for model_id={model_id}")
-
-
-def _resolve_dataset_path(dataset_id: str, dataset_doc: dict) -> Path:
-    candidates = [BACKEND_ROOT / "storage" / "datasets" / f"{dataset_id}.csv"]
-    storage_path = (dataset_doc.get("storage_path") or "").strip()
-    if storage_path:
-        candidates.extend([Path(storage_path), BACKEND_ROOT / storage_path])
-    file_name = (dataset_doc.get("file_name") or "").strip()
-    if file_name:
-        candidates.append(BACKEND_ROOT / "uploads" / file_name)
-
-    for path in candidates:
-        if path.exists() and path.is_file():
-            return path
-    raise HTTPException(status_code=404, detail=f"Dataset artifact not found for dataset_id={dataset_id}")
-
-
-def _load_real_model(model_path: Path):
-    import joblib
-    import pickle
-
-    try:
-        return joblib.load(model_path)
-    except Exception:
-        try:
-            with open(model_path, "rb") as src:
-                return pickle.load(src)
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail=f"Unable to load model: {exc}") from exc
-
-
-def _load_real_dataset(dataset_path: Path) -> pd.DataFrame:
-    try:
-        return pd.read_csv(dataset_path)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Unable to load dataset: {exc}") from exc
-
-
 def _feature_type_counts(df: pd.DataFrame) -> tuple[int, int]:
     numerical_count = int(df.select_dtypes(include=[np.number]).shape[1])
     categorical_count = int(df.shape[1] - numerical_count)
@@ -258,12 +205,7 @@ def _compute_metrics_if_missing(df: pd.DataFrame, model, target_column: str | No
     if not target_column or target_column not in df.columns:
         return {}
     x = df.drop(columns=[target_column])
-    model_features = list(getattr(model, "feature_names_in_", []) or [])
-    if model_features:
-        for feature in model_features:
-            if feature not in x.columns:
-                x[feature] = 0.0
-        x = x[model_features]
+    x = align_features(model, x)
     y_true = df[target_column]
     try:
         y_pred = model.predict(x)
@@ -405,10 +347,8 @@ async def build_assistant_context(db, tenant_id: str, model_id: str, dataset_id:
     if not dataset_doc:
         raise HTTPException(status_code=404, detail=f"Dataset not found: {dataset_id}")
 
-    model_path = _resolve_model_path(model_id, model_doc)
-    dataset_path = _resolve_dataset_path(dataset_id, dataset_doc)
-    model = _load_real_model(model_path)
-    df = _load_real_dataset(dataset_path)
+    model = load_model(model_doc, model_id)
+    df = load_dataset(dataset_doc, dataset_id)
     if df.empty:
         raise HTTPException(status_code=400, detail="Dataset is empty")
 
@@ -432,7 +372,8 @@ async def build_assistant_context(db, tenant_id: str, model_id: str, dataset_id:
     shap_summary = (shap_doc or {}).get("summary", {})
 
     training_samples = int(getattr(model, "n_samples_seen_", 0) or model_doc.get("training_samples", 0) or df.shape[0])
-    feature_names = list(getattr(model, "feature_names_in_", []) or [])
+    raw_features = getattr(model, "feature_names_in_", None)
+    feature_names = list(raw_features) if raw_features is not None else []
     features_count = int(len(feature_names) or max(0, df.shape[1] - (1 if target_column and target_column in df.columns else 0)))
 
     numerical_count, categorical_count = _feature_type_counts(df)
@@ -457,12 +398,12 @@ async def build_assistant_context(db, tenant_id: str, model_id: str, dataset_id:
             "training_samples": training_samples,
             "features_count": features_count,
             "target_column": target_column,
-            "model_path": str(model_path),
+            "storage_path": model_doc.get("storage_path"),
         },
         "dataset": {
             "id": dataset_id,
             "name": dataset_doc.get("name"),
-            "dataset_path": str(dataset_path),
+            "storage_path": dataset_doc.get("storage_path"),
             "stats": stats,
             "quality": quality,
         },

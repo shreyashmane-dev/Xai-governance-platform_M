@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { EmptyState, Loader } from '../components/feedback/States'
-import { evaluateService } from '../services'
+import { datasetService, evaluateService, modelService } from '../services'
 import { getApiErrorMessage } from '../utils/apiError'
 
 function pct(value) {
@@ -13,6 +13,10 @@ function pct(value) {
 export default function EvaluatePage() {
   const [datasetFile, setDatasetFile] = useState(null)
   const [modelFile, setModelFile] = useState(null)
+  const [models, setModels] = useState([])
+  const [datasets, setDatasets] = useState([])
+  const [selectedModelId, setSelectedModelId] = useState('')
+  const [selectedDatasetId, setSelectedDatasetId] = useState('')
   const [targetColumn, setTargetColumn] = useState('target')
   const [sensitiveColumn, setSensitiveColumn] = useState('')
   const [modelName, setModelName] = useState('')
@@ -27,8 +31,18 @@ export default function EvaluatePage() {
   useEffect(() => {
     async function loadHistory() {
       try {
-        const response = await evaluateService.history(20)
-        setHistory(response?.data?.data || [])
+        const [historyResponse, modelsResponse, datasetsResponse] = await Promise.all([
+          evaluateService.history(20),
+          modelService.list(),
+          datasetService.list(),
+        ])
+        const modelRows = modelsResponse?.data?.data || []
+        const datasetRows = datasetsResponse?.data?.data || []
+        setModels(modelRows)
+        setDatasets(datasetRows)
+        setSelectedModelId((current) => current || modelRows[0]?.id || '')
+        setSelectedDatasetId((current) => current || datasetRows[0]?.id || '')
+        setHistory(historyResponse?.data?.data || [])
       } catch {
         setHistory([])
       } finally {
@@ -49,26 +63,38 @@ export default function EvaluatePage() {
 
   async function handleEvaluate(event) {
     event.preventDefault()
-    if (!datasetFile || !modelFile) {
-      setError('Select both dataset (.csv) and model (.pkl/.pickle).')
+    const selectedModel = models.find((model) => model.id === selectedModelId) || null
+    const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) || null
+    const useUploadedAssets = Boolean(selectedModel && selectedDataset)
+    if (!useUploadedAssets && (!datasetFile || !modelFile)) {
+      setError('Select an uploaded model and dataset, or provide both files as a fallback.')
       return
     }
 
     setLoading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('dataset', datasetFile)
-      formData.append('model', modelFile)
-      formData.append('targetColumn', targetColumn || 'target')
-      formData.append('sensitiveColumn', sensitiveColumn || '')
-      formData.append('modelName', modelName || modelFile.name.replace(/\.(pkl|pickle)$/i, ''))
-      formData.append('datasetName', datasetName || datasetFile.name.replace(/\.csv$/i, ''))
-
-      const response = await evaluateService.evaluate(formData)
+      const response = useUploadedAssets
+        ? await evaluateService.evaluateUploaded({
+            modelId: selectedModel.id,
+            datasetId: selectedDataset.id,
+            modelName: selectedModel.name,
+            datasetName: selectedDataset.name,
+            targetColumn: targetColumn || selectedModel.target_column || 'target',
+            sensitiveColumn,
+          })
+        : await evaluateService.evaluate((() => {
+            const formData = new FormData()
+            formData.append('dataset', datasetFile)
+            formData.append('model', modelFile)
+            formData.append('targetColumn', targetColumn || 'target')
+            formData.append('sensitiveColumn', sensitiveColumn || '')
+            formData.append('modelName', modelName || modelFile.name.replace(/\.(pkl|pickle)$/i, ''))
+            formData.append('datasetName', datasetName || datasetFile.name.replace(/\.csv$/i, ''))
+            return formData
+          })())
       setResult(response.data)
 
-      // Drop file objects from frontend memory immediately after successful processing.
       setDatasetFile(null)
       setModelFile(null)
 
@@ -110,9 +136,30 @@ export default function EvaluatePage() {
       <div className="card space-y-3">
         <h3 className="text-lg font-semibold">In-Memory Evaluation</h3>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Files are processed in memory only, then discarded. Backend stores only computed results.
+          Evaluate the model and dataset already uploaded to the platform. Direct files are available only as a fallback.
         </p>
         <form className="grid gap-3 md:grid-cols-2" onSubmit={handleEvaluate}>
+          <div>
+            <label className="mb-1 block text-xs" style={{ color: 'var(--text-muted)' }}>Uploaded Model</label>
+            <select value={selectedModelId} onChange={(event) => setSelectedModelId(event.target.value)}>
+              {!models.length && <option value="">No uploaded models</option>}
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>{model.name} ({model.model_type || 'model'})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs" style={{ color: 'var(--text-muted)' }}>Uploaded Dataset</label>
+            <select value={selectedDatasetId} onChange={(event) => setSelectedDatasetId(event.target.value)}>
+              {!datasets.length && <option value="">No uploaded datasets</option>}
+              {datasets.map((dataset) => (
+                <option key={dataset.id} value={dataset.id}>{dataset.name} ({dataset.row_count || 0} rows)</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Fallback upload fields below are used only when an uploaded model or dataset is not selected.
+          </div>
           <div>
             <label className="mb-1 block text-xs" style={{ color: 'var(--text-muted)' }}>Dataset (.csv)</label>
             <input

@@ -6,6 +6,7 @@ import pickle
 import threading
 
 import joblib
+import numpy as np
 import pandas as pd
 from bson import ObjectId
 from fastapi import HTTPException
@@ -23,16 +24,10 @@ def _as_object_id(value: str):
     return None
 
 
+from app.utils.local_models import find_local_model
+
 async def find_model_doc(db, tenant_id: str, model_id: str) -> dict | None:
-    filters: list[dict] = [{"_id": model_id, "tenant_id": tenant_id}, {"id": model_id, "tenant_id": tenant_id}]
-    oid = _as_object_id(model_id)
-    if oid is not None:
-        filters.append({"_id": oid, "tenant_id": tenant_id})
-    for current_filter in filters:
-        doc = await db.models.find_one(current_filter)
-        if doc:
-            return doc
-    return None
+    return find_local_model(tenant_id, model_id)
 
 
 async def find_dataset_doc(db, tenant_id: str, dataset_id: str) -> dict | None:
@@ -54,6 +49,12 @@ def _candidate_paths(doc: dict, artifact_id: str, resource_type: str) -> Iterabl
     if storage_path:
         path = Path(storage_path)
         yield path
+        normalized = storage_path.replace("\\", "/")
+        if normalized.startswith("/app/"):
+            yield BACKEND_ROOT / normalized.removeprefix("/app/")
+        if not path.is_absolute():
+            yield Path.cwd() / path
+            yield Path.cwd().parent / path
         if not path.is_absolute():
             yield BACKEND_ROOT / path
 
@@ -125,15 +126,47 @@ def load_dataset(doc: dict, dataset_id: str) -> pd.DataFrame:
 
 
 def align_features(model, x: pd.DataFrame) -> pd.DataFrame:
-    model_features = list(getattr(model, "feature_names_in_", []) or [])
+    raw_features = getattr(model, "feature_names_in_", None)
+    model_features = list(raw_features) if raw_features is not None else []
     if not model_features:
-        return x
+        return prepare_feature_frame(x)
 
     aligned = x.copy()
     for column in model_features:
         if column not in aligned.columns:
             aligned[column] = 0.0
-    return aligned[model_features]
+    return prepare_feature_frame(aligned[model_features])
+
+
+def prepare_feature_frame(x: pd.DataFrame) -> pd.DataFrame:
+    cleaned = x.copy()
+    for column in cleaned.columns:
+        series = cleaned[column]
+        numeric = pd.to_numeric(series, errors="coerce")
+        if numeric.notna().sum() > 0:
+            fill_value = numeric.median(skipna=True)
+            if pd.isna(fill_value):
+                fill_value = 0.0
+            cleaned[column] = numeric.fillna(fill_value)
+            continue
+
+        text = series.fillna("__missing__").astype(str)
+        if text.empty:
+            cleaned[column] = 0.0
+            continue
+        mode = text.mode(dropna=True)
+        fill_value = mode.iloc[0] if not mode.empty else "__missing__"
+        text = text.replace("__missing__", fill_value)
+        cleaned[column] = pd.factorize(text, sort=True)[0].astype(float)
+
+    cleaned = cleaned.apply(pd.to_numeric, errors="coerce")
+    cleaned = cleaned.replace([np.inf, -np.inf, float("inf"), float("-inf")], np.nan)
+    cleaned = cleaned.fillna(0.0)
+    return pd.DataFrame(
+        np.nan_to_num(cleaned.to_numpy(dtype=float), nan=0.0, posinf=0.0, neginf=0.0),
+        columns=cleaned.columns,
+        index=cleaned.index,
+    )
 
 
 def infer_target_column(model_doc: dict, df: pd.DataFrame, model) -> str | None:
@@ -141,7 +174,8 @@ def infer_target_column(model_doc: dict, df: pd.DataFrame, model) -> str | None:
     if explicit_target and explicit_target in df.columns:
         return explicit_target
 
-    model_features = list(getattr(model, "feature_names_in_", []) or [])
+    raw_features = getattr(model, "feature_names_in_", None)
+    model_features = list(raw_features) if raw_features is not None else []
     if model_features:
         remaining = [column for column in df.columns if column not in model_features]
         if len(remaining) == 1:

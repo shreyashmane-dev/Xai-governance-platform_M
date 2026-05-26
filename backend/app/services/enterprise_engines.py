@@ -39,7 +39,8 @@ def validate_model_type(model: Any) -> str:
 
 
 def auto_detect_feature_names(model: Any, dataset: pd.DataFrame | None = None) -> list[str]:
-    model_features = list(getattr(model, "feature_names_in_", []) or [])
+    raw_features = getattr(model, "feature_names_in_", None)
+    model_features = list(raw_features) if raw_features is not None else []
     if model_features:
         return model_features
     if dataset is not None:

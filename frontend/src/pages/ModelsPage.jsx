@@ -50,10 +50,12 @@ export default function ModelsPage() {
       ])
       const models = modelsRes.data.data || []
       const rows = datasetsRes.data.data || []
+      const activeModel = models.find((model) => model.id === state.activeModel?.id) || models[0] || null
+      const activeDataset = rows.find((dataset) => dataset.id === state.dataset?.id) || rows[0] || null
       actions.patch({
         models,
-        activeModel: state.activeModel || models[0] || null,
-        dataset: state.dataset || rows[0] || null,
+        activeModel,
+        dataset: activeDataset,
       })
       setDatasets(rows)
     } catch (event) {
@@ -110,7 +112,7 @@ export default function ModelsPage() {
     const file = event.target.files?.[0]
     if (!file) return
     const form = new FormData()
-    const resolvedName = file.name.replace(/\.pkl$/i, '')
+    const resolvedName = file.name.replace(/\.(pkl|pickle)$/i, '')
     form.append('name', resolvedName)
     form.append('modelName', resolvedName)
     form.append('description', intendedUse || '')
@@ -149,6 +151,11 @@ export default function ModelsPage() {
         }
       }
       await refresh()
+      if (newModelId) {
+        const modelsRes = await modelService.list()
+        const uploadedModel = (modelsRes?.data?.data || []).find((model) => model.id === newModelId)
+        if (uploadedModel) actions.patch({ activeModel: uploadedModel })
+      }
       await runAutoScan(newModelId, state.dataset?.id)
       setTimeout(() => setUploadProgress(0), 800)
     } catch (err) {
@@ -163,7 +170,7 @@ export default function ModelsPage() {
     const file = event.target.files?.[0]
     if (!file) return
     const form = new FormData()
-    form.append('name', file.name.replace('.csv', ''))
+    form.append('name', file.name.replace(/\.csv$/i, ''))
     form.append('version', `v${Date.now()}`)
     form.append('file', file)
     try {
@@ -173,6 +180,11 @@ export default function ModelsPage() {
       setDatasetMeta(null)
       actions.addNotification({ type: 'success', title: 'Dataset uploaded', message: file.name })
       await refresh()
+      if (newDatasetId) {
+        const datasetsRes = await datasetService.list()
+        const uploadedDataset = (datasetsRes?.data?.data || []).find((dataset) => dataset.id === newDatasetId)
+        if (uploadedDataset) actions.patch({ dataset: uploadedDataset })
+      }
       await runAutoScan(state.activeModel?.id, newDatasetId)
     } catch (err) {
       actions.addNotification({ type: 'error', title: 'Dataset upload failed', message: getApiErrorMessage(err) })

@@ -22,7 +22,8 @@ def check_feature_compatibility(
 ) -> CompatibilityResult:
     expected_features = list(model_doc.get("feature_schema") or [])
     if not expected_features and model is not None:
-        expected_features = list(getattr(model, "feature_names_in_", []) or [])
+        raw_features = getattr(model, "feature_names_in_", None)
+        expected_features = list(raw_features) if raw_features is not None else []
 
     dataset_features = [col for col in dataset_df.columns if col != target_column]
     if not expected_features:

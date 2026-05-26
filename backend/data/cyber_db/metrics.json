@@ -1,102 +1,492 @@
 [
   {
     "tenant_id": "default",
-    "model_id": "69a3ca86c0d7a31c215194df",
-    "dataset_id": "69a3ca87c0d7a31c215194e1",
+    "model_id": "6a1498328acf678b68ec9ced",
+    "dataset_id": "6a14984b8acf678b68ec9cef",
     "metrics": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "f1_score": 1.0,
+      "accuracy": 0.8475,
+      "precision": 0.8272823275862068,
+      "recall": 0.8475,
+      "f1": 0.8023832624366141,
+      "f1_score": 0.8023832624366141,
       "confusion_matrix": [
         [
-          5,
-          0
+          989,
+          12
         ],
         [
-          0,
-          5
+          171,
+          28
         ]
       ],
-      "target_column": "Marks"
+      "target_column": "RiskCategory"
     },
-    "created_at": "2026-03-01 05:23:16.639913+00:00",
-    "_id": "69a3cd44d34444cc078a27d9"
+    "created_at": "2026-05-25 18:43:23.604401+00:00",
+    "_id": "6a14984b8acf678b68ec9cf1"
   },
   {
     "tenant_id": "default",
-    "model_id": "69a3ca86c0d7a31c215194df",
-    "dataset_id": "69a3ca87c0d7a31c215194e1",
+    "model_id": "6a1498328acf678b68ec9ced",
+    "dataset_id": "6a1498588acf678b68ec9cf3",
     "metrics": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "f1_score": 1.0,
+      "accuracy": 0.7216666666666667,
+      "precision": 0.7305122640209453,
+      "recall": 0.7216666666666667,
+      "f1": 0.7246350669299977,
+      "f1_score": 0.7246350669299977,
       "confusion_matrix": [
         [
-          5,
-          0
+          298,
+          140
         ],
         [
-          0,
-          5
+          194,
+          568
         ]
       ],
-      "target_column": "Marks"
+      "target_column": "RiskCategory"
     },
-    "created_at": "2026-03-01 05:29:19.045437+00:00",
-    "_id": "69a3ceaf01272854d9c3d28c"
+    "created_at": "2026-05-25 18:43:37.240791+00:00",
+    "_id": "6a1498598acf678b68ec9cf5"
   },
   {
     "tenant_id": "default",
-    "model_id": "69a3d17c4336a6a3f3a75a74",
-    "dataset_id": "69a3d17d4336a6a3f3a75a76",
+    "model_id": "6a1498328acf678b68ec9ced",
+    "dataset_id": "6a1498648acf678b68ec9cf7",
     "metrics": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "f1_score": 1.0,
+      "accuracy": 0.84,
+      "precision": 0.8787878787878788,
+      "recall": 0.84,
+      "f1": 0.8357963875205254,
+      "f1_score": 0.8357963875205254,
       "confusion_matrix": [
         [
-          5,
-          0
+          34,
+          16
         ],
         [
           0,
-          5
+          50
         ]
       ],
-      "target_column": "Marks"
+      "target_column": "high_risk_probability"
     },
-    "created_at": "2026-03-01 05:41:17.454684+00:00",
-    "_id": "69a3d17d4336a6a3f3a75a78"
+    "created_at": "2026-05-25 18:43:48.806265+00:00",
+    "_id": "6a1498648acf678b68ec9cf9"
   },
   {
     "tenant_id": "default",
-    "model_id": "69a3d17c4336a6a3f3a75a74",
-    "dataset_id": "69a3d17d4336a6a3f3a75a76",
+    "model_id": "6a1498328acf678b68ec9ced",
+    "dataset_id": "6a14986b8acf678b68ec9cfb",
     "metrics": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "f1_score": 1.0,
+      "accuracy": 0.850625,
+      "precision": 0.8239471860403296,
+      "recall": 0.850625,
+      "f1": 0.8061521135932501,
+      "f1_score": 0.8061521135932501,
       "confusion_matrix": [
         [
-          5,
+          1328,
+          18
+        ],
+        [
+          221,
+          33
+        ]
+      ],
+      "target_column": "RiskCategory"
+    },
+    "created_at": "2026-05-25 18:43:56.169166+00:00",
+    "_id": "6a14986c8acf678b68ec9cfd"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a14986b8acf678b68ec9cfb",
+    "metrics": {
+      "accuracy": 0.84125,
+      "precision": 0.7077015625,
+      "recall": 0.84125,
+      "f1": 0.7687186014935505,
+      "f1_score": 0.7687186014935505,
+      "confusion_matrix": [
+        [
+          1346,
           0
         ],
         [
-          0,
-          5
+          254,
+          0
         ]
       ],
-      "target_column": "Marks"
+      "auc": null,
+      "target_column": "RiskCategory"
     },
-    "created_at": "2026-03-01 06:08:00.688402+00:00",
-    "_id": "69a3d7c032cc649ef15c02f7"
+    "created_at": "2026-05-25 18:44:49.664346+00:00",
+    "_id": "6a1498a18acf678b68ec9d01"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a1498aa8acf678b68ec9d03",
+    "metrics": {
+      "accuracy": 0.776875,
+      "precision": 0.7853203724424553,
+      "recall": 0.776875,
+      "f1": 0.7756290795240119,
+      "f1_score": 0.7756290795240119,
+      "confusion_matrix": [
+        [
+          568,
+          245
+        ],
+        [
+          112,
+          675
+        ]
+      ],
+      "auc": null,
+      "target_column": "Loan_Status"
+    },
+    "created_at": "2026-05-25 18:44:58.342226+00:00",
+    "_id": "6a1498aa8acf678b68ec9d05"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a1498c48acf678b68ec9d07",
+    "metrics": {
+      "accuracy": 0.7525,
+      "precision": 0.7693927435894442,
+      "recall": 0.7525,
+      "f1": 0.7600095799747625,
+      "f1_score": 0.7600095799747625,
+      "confusion_matrix": [
+        [
+          794,
+          170
+        ],
+        [
+          127,
+          109
+        ]
+      ],
+      "auc": null,
+      "target_column": "Loan_Status"
+    },
+    "created_at": "2026-05-25 18:45:25.190162+00:00",
+    "_id": "6a1498c58acf678b68ec9d09"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a1498d18acf678b68ec9d0b",
+    "metrics": {
+      "accuracy": 0.665,
+      "precision": 0.6713774499258371,
+      "recall": 0.665,
+      "f1": 0.6635068639686219,
+      "f1_score": 0.6635068639686219,
+      "confusion_matrix": [
+        [
+          367,
+          251
+        ],
+        [
+          151,
+          431
+        ]
+      ],
+      "auc": null,
+      "target_column": "Loan_Status"
+    },
+    "created_at": "2026-05-25 18:45:37.387117+00:00",
+    "_id": "6a1498d18acf678b68ec9d0d"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a1498d78acf678b68ec9d0f",
+    "metrics": {
+      "accuracy": 0.72,
+      "precision": 0.8205128205128205,
+      "recall": 0.72,
+      "f1": 0.6961805555555556,
+      "f1_score": 0.6961805555555556,
+      "confusion_matrix": [
+        [
+          50,
+          0
+        ],
+        [
+          28,
+          22
+        ]
+      ],
+      "auc": null,
+      "target_column": "approval_probability"
+    },
+    "created_at": "2026-05-25 18:45:43.806337+00:00",
+    "_id": "6a1498d78acf678b68ec9d11"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a1498d78acf678b68ec9d0f",
+    "metrics": {
+      "accuracy": 0.5,
+      "precision": 0.25,
+      "recall": 0.5,
+      "f1": 0.33333333333333326,
+      "f1_score": 0.33333333333333326,
+      "confusion_matrix": [
+        [
+          50,
+          0
+        ],
+        [
+          50,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "approval_probability"
+    },
+    "created_at": "2026-05-25 18:46:25.003536+00:00",
+    "_id": "6a1499018acf678b68ec9d15"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a14990f8acf678b68ec9d17",
+    "metrics": {
+      "accuracy": 0.8833333333333333,
+      "precision": 0.7802777777777777,
+      "recall": 0.8833333333333333,
+      "f1": 0.8286135693215338,
+      "f1_score": 0.8286135693215338,
+      "confusion_matrix": [
+        [
+          1060,
+          0
+        ],
+        [
+          140,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-25 18:46:39.818964+00:00",
+    "_id": "6a14990f8acf678b68ec9d19"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a1499128acf678b68ec9d1b",
+    "metrics": {
+      "accuracy": 0.9808333333333333,
+      "precision": 0.9620340277777778,
+      "recall": 0.9808333333333333,
+      "f1": 0.9713427289300239,
+      "f1_score": 0.9713427289300239,
+      "confusion_matrix": [
+        [
+          1177,
+          0
+        ],
+        [
+          23,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-25 18:46:43.227165+00:00",
+    "_id": "6a1499138acf678b68ec9d1d"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a1499168acf678b68ec9d1f",
+    "metrics": {
+      "accuracy": 0.5,
+      "precision": 0.25,
+      "recall": 0.5,
+      "f1": 0.33333333333333326,
+      "f1_score": 0.33333333333333326,
+      "confusion_matrix": [
+        [
+          50,
+          0
+        ],
+        [
+          50,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "fraud_probability"
+    },
+    "created_at": "2026-05-25 18:46:46.894165+00:00",
+    "_id": "6a1499168acf678b68ec9d21"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a14991a8acf678b68ec9d23",
+    "metrics": {
+      "accuracy": 0.976875,
+      "precision": 0.9774107701941139,
+      "recall": 0.976875,
+      "f1": 0.9670613844465233,
+      "f1_score": 0.9670613844465233,
+      "confusion_matrix": [
+        [
+          1560,
+          0
+        ],
+        [
+          37,
+          3
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-25 18:46:50.461894+00:00",
+    "_id": "6a14991a8acf678b68ec9d25"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499008acf678b68ec9d13",
+    "dataset_id": "6a14991a8acf678b68ec9d23",
+    "metrics": {
+      "accuracy": 0.976875,
+      "precision": 0.9774107701941139,
+      "recall": 0.976875,
+      "f1": 0.9670613844465233,
+      "f1_score": 0.9670613844465233,
+      "confusion_matrix": [
+        [
+          1560,
+          0
+        ],
+        [
+          37,
+          3
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-25 18:47:13.747550+00:00",
+    "_id": "6a1499318acf678b68ec9d27"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1498a18acf678b68ec9cff",
+    "dataset_id": "6a1498c48acf678b68ec9d07",
+    "metrics": {
+      "accuracy": 0.7525,
+      "precision": 0.7693927435894442,
+      "recall": 0.7525,
+      "f1": 0.7600095799747625,
+      "f1_score": 0.7600095799747625,
+      "confusion_matrix": [
+        [
+          794,
+          170
+        ],
+        [
+          127,
+          109
+        ]
+      ],
+      "auc": null,
+      "target_column": "Loan_Status"
+    },
+    "created_at": "2026-05-25 18:47:50.837007+00:00",
+    "_id": "6a1499568acf678b68ec9d29"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1499888acf678b68ec9d2d",
+    "dataset_id": "6a1499888acf678b68ec9d2b",
+    "metrics": {
+      "accuracy": 0.8833333333333333,
+      "precision": 0.7802777777777777,
+      "recall": 0.8833333333333333,
+      "f1": 0.8286135693215338,
+      "f1_score": 0.8286135693215338,
+      "confusion_matrix": [
+        [
+          1060,
+          0
+        ],
+        [
+          140,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-25 18:48:40.718942+00:00",
+    "_id": "6a1499888acf678b68ec9d2f"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1545cd37b370b47e1e0763",
+    "dataset_id": "6a1499888acf678b68ec9d2b",
+    "metrics": {
+      "accuracy": 0.8833333333333333,
+      "precision": 0.7802777777777777,
+      "recall": 0.8833333333333333,
+      "f1": 0.8286135693215338,
+      "f1_score": 0.8286135693215338,
+      "confusion_matrix": [
+        [
+          1060,
+          0
+        ],
+        [
+          140,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-26 07:03:41.992537+00:00",
+    "_id": "6a1545cd37b370b47e1e0765"
+  },
+  {
+    "tenant_id": "default",
+    "model_id": "6a1545cd37b370b47e1e0763",
+    "dataset_id": "6a1545d737b370b47e1e0767",
+    "metrics": {
+      "accuracy": 0.8833333333333333,
+      "precision": 0.7802777777777777,
+      "recall": 0.8833333333333333,
+      "f1": 0.8286135693215338,
+      "f1_score": 0.8286135693215338,
+      "confusion_matrix": [
+        [
+          1060,
+          0
+        ],
+        [
+          140,
+          0
+        ]
+      ],
+      "auc": null,
+      "target_column": "Fraudulent"
+    },
+    "created_at": "2026-05-26 07:03:51.525580+00:00",
+    "_id": "6a1545d737b370b47e1e0769"
   }
 ]

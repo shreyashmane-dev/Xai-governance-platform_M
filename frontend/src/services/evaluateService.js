@@ -40,37 +40,7 @@ function toFairness(governance, sensitiveColumn) {
 }
 
 export const evaluateService = {
-  evaluate: async (formData) => {
-    const datasetFile = formData.get('dataset')
-    const modelFile = formData.get('model')
-    const targetColumn = (formData.get('targetColumn') || 'target').toString().trim() || 'target'
-    const sensitiveColumn = (formData.get('sensitiveColumn') || '').toString().trim()
-    const modelNameInput = (formData.get('modelName') || '').toString().trim()
-    const datasetNameInput = (formData.get('datasetName') || '').toString().trim()
-
-    const modelName = modelNameInput || cleanBaseName(modelFile?.name, 'model', /\.(pkl|pickle)$/i)
-    const datasetName = datasetNameInput || cleanBaseName(datasetFile?.name, 'dataset', /\.csv$/i)
-    const version = `v${Date.now()}`
-
-    const modelPayload = new FormData()
-    modelPayload.append('name', modelName)
-    modelPayload.append('version', version)
-    modelPayload.append('target_column', targetColumn)
-    modelPayload.append('file', modelFile)
-
-    const datasetPayload = new FormData()
-    datasetPayload.append('name', datasetName)
-    datasetPayload.append('version', version)
-    datasetPayload.append('file', datasetFile)
-
-    const [modelRes, datasetRes] = await Promise.all([
-      modelService.upload(modelPayload),
-      datasetService.upload(datasetPayload),
-    ])
-
-    const modelId = modelRes?.data?.data?.id
-    const datasetId = datasetRes?.data?.data?.id
-
+  evaluateUploaded: async ({ modelId, datasetId, modelName, datasetName, targetColumn = 'target', sensitiveColumn = '' }) => {
     const [metricsRes, shapRes, governanceRes, previewRes] = await Promise.all([
       analyticsService.metrics(modelId, datasetId),
       analyticsService.shap(modelId, datasetId),
@@ -103,6 +73,39 @@ export const evaluateService = {
         preview: previewData.preview || [],
       },
     }
+  },
+  evaluate: async (formData) => {
+    const datasetFile = formData.get('dataset')
+    const modelFile = formData.get('model')
+    const targetColumn = (formData.get('targetColumn') || 'target').toString().trim() || 'target'
+    const sensitiveColumn = (formData.get('sensitiveColumn') || '').toString().trim()
+    const modelNameInput = (formData.get('modelName') || '').toString().trim()
+    const datasetNameInput = (formData.get('datasetName') || '').toString().trim()
+
+    const modelName = modelNameInput || cleanBaseName(modelFile?.name, 'model', /\.(pkl|pickle)$/i)
+    const datasetName = datasetNameInput || cleanBaseName(datasetFile?.name, 'dataset', /\.csv$/i)
+    const version = `v${Date.now()}`
+
+    const modelPayload = new FormData()
+    modelPayload.append('name', modelName)
+    modelPayload.append('version', version)
+    modelPayload.append('target_column', targetColumn)
+    modelPayload.append('file', modelFile)
+
+    const datasetPayload = new FormData()
+    datasetPayload.append('name', datasetName)
+    datasetPayload.append('version', version)
+    datasetPayload.append('file', datasetFile)
+
+    const [modelRes, datasetRes] = await Promise.all([
+      modelService.upload(modelPayload),
+      datasetService.upload(datasetPayload),
+    ])
+
+    const modelId = modelRes?.data?.data?.id
+    const datasetId = datasetRes?.data?.data?.id
+
+    return evaluateService.evaluateUploaded({ modelId, datasetId, modelName, datasetName, targetColumn, sensitiveColumn })
   },
   history: (limit = 20) => api.get('/evaluations', { params: { limit } }),
 }

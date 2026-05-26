@@ -611,3 +611,12 @@ The XAI Governance Platform is a comprehensive project aimed at bridging model d
 - `docker-compose.yml`: local deployment orchestration
 - `frontend/package.json`: frontend dependencies and scripts
 - `backend/requirements.txt`: backend Python dependencies
+
+
+
+
+
+
+
+
+http://localhost:5173/

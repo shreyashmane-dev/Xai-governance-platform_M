@@ -22,6 +22,11 @@ function ImageBlock({ title, image, mime = 'image/png' }) {
   )
 }
 
+function fmt(value, digits = 4) {
+  if (value == null || Number.isNaN(Number(value))) return 'N/A'
+  return Number(value).toFixed(digits)
+}
+
 export default function ExplainabilityPage() {
   const { state, actions } = useAppState()
   const [models, setModels] = useState([])
@@ -112,6 +117,7 @@ export default function ExplainabilityPage() {
   const shapData = state.shapValues || {}
   const globalData = shapData.global || {}
   const localData = shapData.local || {}
+  const quality = shapData.analysis_quality || {}
   const globalImageMime = globalData.image_mime || 'image/png'
   const localImageMime = localData.image_mime || 'image/png'
 
@@ -174,11 +180,58 @@ export default function ExplainabilityPage() {
         <>
           <div className="card space-y-4">
             <h4 className="text-lg font-semibold">Global SHAP</h4>
+            <div className="grid gap-3 text-sm md:grid-cols-4">
+              <div className="rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Rows Explained</div>
+                <div className="font-semibold">{quality.rows_explained || shapData.sample_size || 0}</div>
+              </div>
+              <div className="rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Features</div>
+                <div className="font-semibold">{quality.features_explained || (globalData.features || []).length}</div>
+              </div>
+              <div className="rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Top-3 Concentration</div>
+                <div className="font-semibold">{fmt((quality.top_feature_concentration || 0) * 100, 2)}%</div>
+              </div>
+              <div className="rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Explainer</div>
+                <div className="font-semibold">{quality.explainer || 'SHAP'}</div>
+              </div>
+            </div>
             <div className="grid gap-4 xl:grid-cols-2">
               <ImageBlock title="Summary Plot" image={globalData.summary_plot} mime={globalImageMime} />
               <ImageBlock title="Feature Importance Bar Chart" image={globalData.bar_plot} mime={globalImageMime} />
               <ImageBlock title="Beeswarm Plot" image={globalData.beeswarm_plot} mime={globalImageMime} />
               <ImageBlock title="Dependence Plot" image={globalData.dependence_plot} mime={globalImageMime} />
+            </div>
+            <div className="overflow-auto rounded border p-3" style={{ borderColor: 'var(--border-muted)' }}>
+              <h5 className="mb-2 font-semibold">Feature Diagnostics</h5>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left" style={{ borderColor: 'var(--border-muted)' }}>
+                    <th>Feature</th>
+                    <th>Mean |SHAP|</th>
+                    <th>Mean SHAP</th>
+                    <th>P05</th>
+                    <th>P95</th>
+                    <th>Direction</th>
+                    <th>Impact %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(globalData.feature_diagnostics || []).slice(0, 15).map((row) => (
+                    <tr key={row.feature} className="border-b" style={{ borderColor: 'var(--border-muted)' }}>
+                      <td>{row.feature}</td>
+                      <td>{fmt(row.mean_abs_shap)}</td>
+                      <td>{fmt(row.mean_shap)}</td>
+                      <td>{fmt(row.p05_shap)}</td>
+                      <td>{fmt(row.p95_shap)}</td>
+                      <td>{row.direction}</td>
+                      <td>{fmt(row.impact_percentage, 2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -230,6 +283,10 @@ export default function ExplainabilityPage() {
             <div className="rounded border p-3 text-sm" style={{ borderColor: 'var(--border-muted)' }}>
               <div><b>Prediction:</b> {localData.prediction == null ? 'N/A' : String(localData.prediction)}</div>
               <div><b>Base Value:</b> {localData.base_value == null ? 'N/A' : String(localData.base_value)}</div>
+              <div><b>Net SHAP Effect:</b> {localData.net_effect == null ? 'N/A' : fmt(localData.net_effect)}</div>
+              {Array.isArray(localData.probabilities) && (
+                <div><b>Probabilities:</b> {localData.probabilities.map((value) => fmt(value, 4)).join(', ')}</div>
+              )}
             </div>
           </div>
         </>

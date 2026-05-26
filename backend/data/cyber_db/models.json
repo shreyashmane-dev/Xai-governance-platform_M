@@ -2,30 +2,6 @@
   {
     "tenant_id": "default",
     "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
-    "name": "IRIS-model",
-    "version": "v1772297626801",
-    "description": "",
-    "target_column": "target",
-    "metadata": {
-      "model_owner": "",
-      "department": "",
-      "intended_use": "",
-      "risk_category": "medium"
-    },
-    "status": "active",
-    "file_name": "IRIS-model.pkl",
-    "storage_path": "uploads\\IRIS-model_c61f780c7e1c.pkl",
-    "storage_backend": "local",
-    "storage_key": null,
-    "model_type": "LogisticRegression",
-    "feature_schema": [],
-    "checksum": "faef8c43efe74effb0ff899b9163574afa19ee2f3ee34c87249c21a02fac705f",
-    "created_at": "2026-02-28 16:53:57.328063+00:00",
-    "_id": "69a31da54a2dbc7f1cfbda39"
-  },
-  {
-    "tenant_id": "default",
-    "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
     "name": "model",
     "version": "v1772341892782",
     "description": "",
@@ -51,24 +27,24 @@
     "tenant_id": "default",
     "owner_uid": "VGk6XKVvofYAVLkc3Bm4pjDETb12",
     "name": "model",
-    "version": "v1772343676492",
-    "description": "",
+    "version": "v3",
+    "description": "credit score",
     "target_column": "target",
     "metadata": {
-      "model_owner": "",
-      "department": "",
-      "intended_use": "",
+      "model_owner": "shreyash",
+      "department": "CSE",
+      "intended_use": "credit score",
       "risk_category": "medium"
     },
     "status": "active",
     "file_name": "model.pkl",
-    "storage_path": "uploads\\model_6bc3b60dc887.pkl",
+    "storage_path": "uploads\\model_ad4ecdacb21d.pkl",
     "storage_backend": "local",
     "storage_key": null,
-    "model_type": "LinearRegression",
+    "model_type": "LogisticRegression",
     "feature_schema": [],
-    "checksum": "8f77cc7d5e1097f2b9594f66238a651d80ca175bf18baa7c16e44080229fb9b3",
-    "created_at": "2026-03-01 05:41:16.600958+00:00",
-    "_id": "69a3d17c4336a6a3f3a75a74"
+    "checksum": "f937b990f553b3f4cc8fdc511c96928dda366f027d921f033a1a69b8abaf3816",
+    "created_at": "2026-05-25 05:12:14.266152+00:00",
+    "_id": "6a13da2e7676c7ddad4f160a"
   }
 ]

@@ -33,7 +33,7 @@ def init_firebase() -> None:
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)) -> dict:
-    if not FIREBASE_READY and settings.environment == "development":
+    if settings.environment == "development":
         return {
             "uid": "dev-user",
             "email": "dev@example.com",
